@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GradeVision
+namespace GradeVision.Models
 {
-    public class Class1
+    abstract class Question
     {
+        int Id { get; set; }
     }
 }
