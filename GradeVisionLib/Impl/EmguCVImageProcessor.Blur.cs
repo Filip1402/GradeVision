@@ -8,71 +8,61 @@ namespace GradeVisionLib.Impl
 {
     public partial class EmguCVImageProcessor : IImageProcessor
     {
-        public Mat ApplyBlur(Mat image)
+        public Mat Denoise(Mat image)
         {
-            // Estimate noise level (using standard deviation of pixel intensities)
             double noiseLevel = EstimateNoiseLevel(image);
 
-            // Apply optimal blur or sharpen based on noise level
-            if (noiseLevel > 50)
+            if (noiseLevel >= 2) // High/mid noise 
             {
-                image = ApplyGaussianBlur(image, "Blurred");
+                image = ApplyNonLocalMeansDenoising(image, h: 10.0); // Mild edge-preserving denoising
+                AddOperationText(image, $"{noiseLevel:F2} NL-Means");
             }
-            else if (noiseLevel < 10)
+            else // Very clean
             {
-                AddOperationText(image, "Needs sharpening");
-            }
-            else
-            {
-                image = ApplyBilateralFilter(image, "Bilateral");
+                // Skip denoising to preserve maximum detail
+                AddOperationText(image, $"{noiseLevel:F2} No Denoise");
             }
 
             return image;
         }
 
+        #region Supporting Methods
 
-        #region Blur and Noise Estimation
         private double EstimateNoiseLevel(Mat image)
         {
+            using (Mat temp = new Mat())
+            {
+                CvInvoke.MedianBlur(image, temp, 3);
+                CvInvoke.Subtract(image, temp, temp); // Subtract original from blurred
+                temp.ConvertTo(temp, DepthType.Cv32F);
 
-            MCvScalar mean = new MCvScalar();
-            MCvScalar stddev = new MCvScalar();
-
-            CvInvoke.MeanStdDev(image, ref mean, ref stddev);
-
-            return stddev.V0;
+                MCvScalar mean = new MCvScalar();
+                MCvScalar stddev = new MCvScalar();
+                CvInvoke.MeanStdDev(temp, ref mean, ref stddev);
+                return stddev.V0;
+            }
         }
 
-        private Mat ApplyGaussianBlur(Mat image, string operationName)
+        private Mat ApplyNonLocalMeansDenoising(Mat image, double h = 3.0)
         {
-
-            int kernelSize = 5;
-            Mat blurredImage = new Mat();
-            CvInvoke.GaussianBlur(image, blurredImage, new Size(kernelSize, kernelSize), 0);
-
-            AddOperationText(blurredImage, operationName);
-
-            return blurredImage;
-        }
-
-        private Mat ApplyBilateralFilter(Mat image, string operationName)
-        {
-            Mat filteredImage = new Mat();
-            CvInvoke.BilateralFilter(image, filteredImage, 9, 75, 75, Emgu.CV.CvEnum.BorderType.Default);
-
-            AddOperationText(filteredImage, operationName);
-
-            return filteredImage;
+            Mat result = new Mat();
+            CvInvoke.FastNlMeansDenoising(image, result,
+                h: (float)h,
+                templateWindowSize: 5,
+                searchWindowSize: 15);
+            return result;
         }
 
         private void AddOperationText(Mat image, string operationName)
         {
             string text = operationName;
             var font = new Font("Arial", 40);
-            CvInvoke.PutText(image, text, new Point(10, 30), FontFace.HersheySimplex, 1.0, new MCvScalar(0, 255, 0), 2); // Green text
+            CvInvoke.PutText(image, text,
+                new Point(10, 30), FontFace.HersheySimplex,
+                fontScale: 1.0,
+                color: new MCvScalar(0, 255, 0), thickness: 2); // Green text overlay
         }
 
         #endregion
-
     }
 }

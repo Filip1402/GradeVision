@@ -7,7 +7,7 @@ namespace GradeVisionLib.Interfaces
         Mat LoadImage(string imagePath);
         Mat CorrectRotation(Mat image);
         Mat ConvertToGrayscale(Mat inputMat);
-        Mat ApplyBlur(Mat inputMat);
+        Mat Denoise(Mat inputMat);
         Mat ApplyThresholding(Mat inputMat);
 
         Mat ApplyContours(Mat inputMat);

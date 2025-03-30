@@ -30,11 +30,10 @@ namespace GradeVisionLib
                 ConvertToGrayscale,
                 CorrectPerspective,
                 CorrectRotation,
-                ApplyBlur,
+                Denoise,
                 ApplyThresholding,
                 ApplyContours,
                 //DetectAndCropAnswerRegion,
-                ApplyBlur, // Apply blur again after cropping
                 ApplyCannyEdgeDetection
             };
 
@@ -49,7 +48,7 @@ namespace GradeVisionLib
 
         private Mat CorrectRotation(Mat image) => ProcessStep(image, _imageProcessor.CorrectRotation);
 
-        private Mat ApplyBlur(Mat image) => ProcessStep(image, _imageProcessor.ApplyBlur);
+        private Mat Denoise(Mat image) => ProcessStep(image, _imageProcessor.Denoise);
 
         private Mat CorrectPerspective(Mat image) => ProcessStep(image, _imageProcessor.CorrectPerspective);
 
