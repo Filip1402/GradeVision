@@ -1,4 +1,5 @@
 ﻿using GradeVisionLib;
+using GradeVisionLib.Impl;
 using GradeVisionLib.Models;
 using System;
 using System.Drawing;
@@ -8,20 +9,13 @@ namespace TestApp
 {
     public partial class Form1 : Form
     {
-        private string inputFolder = "C:\\Users\\zutif\\OneDrive - Fakultet Organizacije i Informatike Varaždin\\FOI\\Diplomski\\";
-        List<string> inputPics = new List<string>
-        { "6eb22210-d82b-4906-b55d-abb907e26b5d.png",
-            "2.jpg",
-            "3.png",
-            "angled_temp.jpg",
-            "temp_screen.png",
-            "temp_screen1.png",
-            "slika.jpg",
-            "slika_rot1.jpg",
-            "slika_rot2.jpg",
-            "slika_rot3.jpg",
-            "slika_rot4.jpg"
-        };
+        private static string inputFolder = @"C:\Users\zutif\OneDrive - Fakultet Organizacije i Informatike Varaždin\FOI\Diplomski\";
+
+        private List<string> inputPics = [.. Directory.GetFiles(inputFolder, "*.*")
+                                          .Where(file => file.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                                                         file.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                                                         file.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+                                          .Select(Path.GetFileName)];
 
 
         public Form1()

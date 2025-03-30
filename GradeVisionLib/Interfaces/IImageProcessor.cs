@@ -1,7 +1,6 @@
 ﻿using Emgu.CV;
-using System.Drawing;
 
-namespace GradeVisionLib
+namespace GradeVisionLib.Interfaces
 {
     public interface IImageProcessor
     {
@@ -12,7 +11,8 @@ namespace GradeVisionLib
         Mat ApplyThresholding(Mat inputMat);
 
         Mat ApplyContours(Mat inputMat);
-        Rectangle DetectAnswerRegion(Mat binaryImage, Mat baseImage);
+
+        Mat CorrectPerspective(Mat inputMat);
         Mat ApplyCannyEdgeDetection(Mat image);
         string DetectXMarks(Mat edges, Mat baseImage);
 

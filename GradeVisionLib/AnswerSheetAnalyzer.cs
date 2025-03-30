@@ -1,4 +1,5 @@
 ﻿using Emgu.CV;
+using GradeVisionLib.Interfaces;
 
 namespace GradeVisionLib
 {
@@ -11,7 +12,7 @@ namespace GradeVisionLib
         public AnswerSheetAnalyzer(IImageProcessor imageProcessor, string imageName)
         {
             _imageProcessor = imageProcessor;
-            outputDir += "/"+imageName;
+            outputDir += "/" + imageName;
             // Ensure output directory exists
             if (!Directory.Exists(outputDir))
             {
@@ -19,14 +20,15 @@ namespace GradeVisionLib
             }
         }
         public string ProcessAnswerSheet(string imagePath)
-        {   
+        {
             Mat image = _imageProcessor.LoadImage(imagePath);
             SaveStep(image, "00_Raw.png");
 
             // List of processing steps in order
             var steps = new List<Func<Mat, Mat>>
-            {   
+            {
                 ConvertToGrayscale,
+                CorrectPerspective,
                 CorrectRotation,
                 ApplyBlur,
                 ApplyThresholding,
@@ -43,25 +45,18 @@ namespace GradeVisionLib
 
             return DetectXMarks(image);
         }
+        private Mat ConvertToGrayscale(Mat image) => ProcessStep(image, _imageProcessor.ConvertToGrayscale);
 
         private Mat CorrectRotation(Mat image) => ProcessStep(image, _imageProcessor.CorrectRotation);
 
-        private Mat ConvertToGrayscale(Mat image) => ProcessStep(image, _imageProcessor.ConvertToGrayscale);
-
         private Mat ApplyBlur(Mat image) => ProcessStep(image, _imageProcessor.ApplyBlur);
+
+        private Mat CorrectPerspective(Mat image) => ProcessStep(image, _imageProcessor.CorrectPerspective);
 
         private Mat ApplyThresholding(Mat image) => ProcessStep(image, _imageProcessor.ApplyThresholding);
 
         private Mat ApplyContours(Mat image) => ProcessStep(image, _imageProcessor.ApplyContours);
 
-
-        private Mat DetectAndCropAnswerRegion(Mat image)
-        {
-            var region = _imageProcessor.DetectAnswerRegion(image, image);
-            Mat cropped = new Mat(image, region);
-            SaveStep(cropped, GetStepFileName("DetectAndCropAnswerRegion"));
-            return cropped;
-        }
 
         private Mat ApplyCannyEdgeDetection(Mat image) => ProcessStep(image, _imageProcessor.ApplyCannyEdgeDetection);
 
