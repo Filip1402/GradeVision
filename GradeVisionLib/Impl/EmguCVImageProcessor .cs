@@ -8,9 +8,9 @@ namespace GradeVisionLib.Impl
     public partial class EmguCVImageProcessor : IImageProcessor
     {
 
-        public Mat LoadImage(string imagePath)
+        public ImageData LoadImage(string imagePath)
         {
-            return CvInvoke.Imread(imagePath);
+            return EmguCvImage.FromFile(imagePath);
         }
 
         private string SaveImage(Mat image, string fileName)

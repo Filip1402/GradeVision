@@ -10,19 +10,20 @@ namespace GradeVisionLib.Impl
 {
     public partial class EmguCVImageProcessor : IImageProcessor
     {
-        public Mat CorrectRotation(Mat image)
+        public ImageData CorrectRotation(ImageData inputImage)
         {
-            Mat thresholded = ApplyThresholding(image);
-            RotatedRect nameRect = DetectNameRectangle(thresholded, image);
+            var inputMat = (inputImage as EmguCvImage).ToMat();
+            var thresholded = ApplyThresholding(inputImage);
+            RotatedRect nameRect = DetectNameRectangle((thresholded as EmguCvImage).ToMat(), inputMat);
 
-            bool isUpsideDown = nameRect.Center.Y > image.Height / 2;
+            bool isUpsideDown = nameRect.Center.Y > inputMat.Height / 2;
 
             if (isUpsideDown)
             {
-                image = RotateImage(image, 180);
+                inputMat = RotateImage(inputMat, 180);
             }
 
-            return image;
+            return EmguCvImage.FromMat(inputMat);
         }
 
         private Mat RotateImage(Mat image, double angle)

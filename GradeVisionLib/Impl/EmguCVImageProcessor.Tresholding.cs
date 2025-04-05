@@ -6,11 +6,12 @@ namespace GradeVisionLib.Impl
 {
     public partial class EmguCVImageProcessor : IImageProcessor
     {
-        public Mat ApplyThresholding(Mat inputMat)
+        public ImageData ApplyThresholding(ImageData inputImage)
         {
+            var inputMat = (inputImage as EmguCvImage).ToMat();
             Mat threshMat = new Mat();
             CvInvoke.AdaptiveThreshold(inputMat, threshMat, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, 11, 2);
-            return threshMat;
+            return EmguCvImage.FromMat(threshMat);
         }
     }
 }

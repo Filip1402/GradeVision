@@ -20,33 +20,39 @@ namespace GradeVisionLib.Impl
         private const int MAX_CIRCLE_RADIUS = 50;
         private const int MAX_VERTICAL_GROUP_DISTANCE = 15; //inPx
         private const int FILLED_CIRCLE_LIMIT = 30;
-        public (Mat, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(Mat inputMat)
+        public (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData input)
         {
-            Mat outputImage = new Mat();
+            var inputMat = (input as EmguCvImage).ToMat();
+            var outputMat = new EmguCvImage().ToMat();
             //for debug
-            CvInvoke.CvtColor(inputMat, outputImage, ColorConversion.Gray2Bgr);
+            CvInvoke.CvtColor(inputMat, outputMat, ColorConversion.Gray2Bgr);
 
-            var allCircles = DetectAllCircles(inputMat, outputImage);
+            var allCircles = DetectAllCircles(inputMat, outputMat);
 
             var sortedCircleGroups = GroupAndSortCirclesByYPosition(allCircles);
 
-            var filteredGroups = FilterInvalidGroups(sortedCircleGroups, outputImage);
+            var filteredGroups = FilterInvalidGroups(sortedCircleGroups, outputMat);
+
+            double averageFillPercent = filteredGroups.Any()
+                                        ? filteredGroups.SelectMany(group => group.Value)
+                                        .Average(circle => GetFillPercentage(inputMat, (EmguCVCircle)circle))
+                                        : 0;
 
             foreach (var group in filteredGroups)
             {
                 foreach (EmguCVCircle circle in group.Value)
                 {
                     double fillPercent = GetFillPercentage(inputMat, circle);
-                    if (fillPercent > FILLED_CIRCLE_LIMIT)
+                    if (fillPercent > averageFillPercent)
                     {
                         circle.SetToMarked();
                     }
                     //debug
-                    var color = fillPercent > FILLED_CIRCLE_LIMIT ?
+                    var color = fillPercent > averageFillPercent ?
                         MARKED_CIRCLE_COLOR :
                         UNMARKED_CIRCLE_COLOR;
 
-                    CvInvoke.Circle(outputImage,
+                    CvInvoke.Circle(outputMat,
                         new Point((int)circle.X, (int)circle.Y),
                         (int)circle.Radius,
                         color,
@@ -54,7 +60,7 @@ namespace GradeVisionLib.Impl
                 }
             }
 
-            return (outputImage, filteredGroups);
+            return (EmguCvImage.FromMat(outputMat), filteredGroups);
         }
 
         private List<DetectedCircleBase> DetectAllCircles(Mat grayMat, Mat outputImage)

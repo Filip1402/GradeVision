@@ -13,15 +13,16 @@ namespace GradeVisionLib.Impl
     {
         private const double MinContourArea = 1000;
 
-        public Mat CorrectPerspective(Mat image)
+        public ImageData CorrectPerspective(ImageData inputImage)
         {
-            Mat cannyEdges = DetectEdgesCanny(image);
-            Mat adaptiveEdges = DetectEdgesAdaptive(image);
+            var inputMat = (inputImage as EmguCvImage).ToMat();
+            Mat cannyEdges = DetectEdgesCanny(inputMat);
+            Mat adaptiveEdges = DetectEdgesAdaptive(inputMat);
 
             VectorOfPoint cannyRect = FindLargestRectangleContour(cannyEdges);
             VectorOfPoint adaptiveRect = FindLargestRectangleContour(adaptiveEdges);
 
-            Mat outputImage = image.Clone();
+            Mat outputImage = inputMat.Clone();
 
             // Draw the contours on the output image
             if (cannyRect != null)
@@ -44,9 +45,9 @@ namespace GradeVisionLib.Impl
 
 
             if (bestRect == null)
-                return image;
+                return EmguCvImage.FromMat(inputMat);
 
-            return ApplyPerspectiveCorrection(image, bestRect);
+            return EmguCvImage.FromMat(ApplyPerspectiveCorrection(inputMat, bestRect));
         }
 
         private Mat DetectEdgesCanny(Mat image)

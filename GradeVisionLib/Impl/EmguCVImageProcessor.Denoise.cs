@@ -8,22 +8,23 @@ namespace GradeVisionLib.Impl
 {
     public partial class EmguCVImageProcessor : IImageProcessor
     {
-        public Mat Denoise(Mat image)
+        public ImageData Denoise(ImageData inputImage)
         {
-            double noiseLevel = EstimateNoiseLevel(image);
+            var inputMat = (inputImage as EmguCvImage).ToMat();
+            double noiseLevel = EstimateNoiseLevel(inputMat);
 
             if (noiseLevel >= 2) // High/mid noise 
             {
-                image = ApplyNonLocalMeansDenoising(image, h: 10.0); // Mild edge-preserving denoising
-                AddOperationText(image, $"{noiseLevel:F2} NL-Means");
+                inputMat = ApplyNonLocalMeansDenoising(inputMat, h: 10.0); // Mild edge-preserving denoising
+                AddOperationText(inputMat, $"{noiseLevel:F2} NL-Means");
             }
             else // Very clean
             {
                 // Skip denoising to preserve maximum detail
-                AddOperationText(image, $"{noiseLevel:F2} No Denoise");
+                AddOperationText(inputMat, $"{noiseLevel:F2} No Denoise");
             }
 
-            return image;
+            return EmguCvImage.FromMat(inputMat);
         }
 
         #region Supporting Methods

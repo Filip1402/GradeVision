@@ -1,5 +1,6 @@
 ﻿using Emgu.CV;
 using Emgu.CV.Structure;
+using GradeVisionLib.Impl;
 using GradeVisionLib.Interfaces;
 using GradeVisionLib.Models;
 
@@ -25,10 +26,10 @@ namespace GradeVisionLib
 
         public (string, string, double) ProcessControlSheet(string imagePath)
         {
-            Mat image = _imageProcessor.LoadImage(imagePath);
+            ImageData image = _imageProcessor.LoadImage(imagePath);
             SaveStep(image, "00_Raw.png");
 
-            var preprocessingSteps = new List<Func<Mat, Mat>>
+            var preprocessingSteps = new List<Func<ImageData, ImageData>>
                 {
                     ConvertToGrayscale,
                     CorrectPerspective,
@@ -48,10 +49,10 @@ namespace GradeVisionLib
 
         public (string, string, double) ProcessAnswerSheet(string imagePath)
         {
-            Mat image = _imageProcessor.LoadImage(imagePath);
+            ImageData image = _imageProcessor.LoadImage(imagePath);
             SaveStep(image, "00_Raw.png");
 
-            var preprocessingSteps = new List<Func<Mat, Mat>>
+            var preprocessingSteps = new List<Func<ImageData, ImageData>>
                 {
                     ConvertToGrayscale,
                     CorrectPerspective,
@@ -76,40 +77,40 @@ namespace GradeVisionLib
 
             return (outputDir + "/" + LatestFileName, grade, score);
         }
-        private Mat ConvertToGrayscale(Mat image) => ProcessStep(image, _imageProcessor.ConvertToGrayscale);
+        private ImageData ConvertToGrayscale(ImageData image) => ProcessStep(image, _imageProcessor.ConvertToGrayscale);
 
-        private Mat CorrectRotation(Mat image) => ProcessStep(image, _imageProcessor.CorrectRotation);
+        private ImageData CorrectRotation(ImageData image) => ProcessStep(image, _imageProcessor.CorrectRotation);
 
-        private Mat Denoise(Mat image) => ProcessStep(image, _imageProcessor.Denoise);
+        private ImageData Denoise(ImageData image) => ProcessStep(image, _imageProcessor.Denoise);
 
-        private Mat CorrectPerspective(Mat image) => ProcessStep(image, _imageProcessor.CorrectPerspective);
+        private ImageData CorrectPerspective(ImageData image) => ProcessStep(image, _imageProcessor.CorrectPerspective);
 
-        private Mat ApplyThresholding(Mat image) => ProcessStep(image, _imageProcessor.ApplyThresholding);
+        private ImageData ApplyThresholding(ImageData image) => ProcessStep(image, _imageProcessor.ApplyThresholding);
 
-        private (Mat, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(Mat image) => ProcessStep(image, _imageProcessor.CircleDetection);
+        private (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData image) => ProcessStep(image, _imageProcessor.CircleDetection);
 
-        private Mat ProcessStep(Mat image, Func<Mat, Mat> processingFunc)
+        private ImageData ProcessStep(ImageData image, Func<ImageData, ImageData> processingFunc)
         {
-            Mat result = processingFunc(image);
+            ImageData result = processingFunc(image);
             string functionName = processingFunc.Method.Name;
             SaveStep(result, GetStepFileName(functionName));
             return result;
         }
 
-        private (Mat, Dictionary<int, List<DetectedCircleBase>>) ProcessStep(Mat image, Func<Mat, (Mat, Dictionary<int, List<DetectedCircleBase>>)> processingFunc)
+        private (ImageData, Dictionary<int, List<DetectedCircleBase>>) ProcessStep(ImageData image, Func<ImageData, (ImageData, Dictionary<int, List<DetectedCircleBase>>)> processingFunc)
         {
-            (Mat, Dictionary<int, List<DetectedCircleBase>>) results = processingFunc(image);
+            (ImageData, Dictionary<int, List<DetectedCircleBase>>) results = processingFunc(image);
             string functionName = processingFunc.Method.Name;
             SaveStep(results.Item1, GetStepFileName(functionName));
             return results;
         }
 
-        private void SaveStep(Mat image, string fileName)
+        private void SaveStep(ImageData image, string fileName)
         {
             SaveImage(image, fileName);
         }
 
-        private string SaveImage(Mat image, string fileName)
+        private string SaveImage(ImageData image, string fileName)
         {
             string filePath = Path.Combine(outputDir, fileName);
             if (File.Exists(filePath))
@@ -117,7 +118,7 @@ namespace GradeVisionLib
                 File.Delete(filePath);
             }
 
-            CvInvoke.Imwrite(filePath, image);
+            CvInvoke.Imwrite(filePath, (image as EmguCvImage).ToMat());
             return filePath;
         }
 
