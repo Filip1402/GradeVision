@@ -19,7 +19,6 @@ namespace GradeVisionLib.Impl
         private const int MIN_CIRCLE_RADIUS = 8;
         private const int MAX_CIRCLE_RADIUS = 50;
         private const int MAX_VERTICAL_GROUP_DISTANCE = 15; //inPx
-        private const int FILLED_CIRCLE_LIMIT = 30;
         public (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData input)
         {
             var inputMat = (input as EmguCvImage).ToMat();

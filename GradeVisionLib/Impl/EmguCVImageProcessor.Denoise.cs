@@ -13,7 +13,7 @@ namespace GradeVisionLib.Impl
             var inputMat = (inputImage as EmguCvImage).ToMat();
             double noiseLevel = EstimateNoiseLevel(inputMat);
 
-            if (noiseLevel >= 2) // High/mid noise 
+            if (noiseLevel >= 1.5) // High/mid noise 
             {
                 inputMat = ApplyNonLocalMeansDenoising(inputMat, h: 10.0); // Mild edge-preserving denoising
                 AddOperationText(inputMat, $"{noiseLevel:F2} NL-Means");

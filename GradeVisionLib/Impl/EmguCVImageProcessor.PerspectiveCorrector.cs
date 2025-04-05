@@ -17,6 +17,7 @@ namespace GradeVisionLib.Impl
         {
             var inputMat = (inputImage as EmguCvImage).ToMat();
             Mat cannyEdges = DetectEdgesCanny(inputMat);
+            SaveImage(cannyEdges, "canny.png");
             Mat adaptiveEdges = DetectEdgesAdaptive(inputMat);
 
             VectorOfPoint cannyRect = FindLargestRectangleContour(cannyEdges);
@@ -34,15 +35,12 @@ namespace GradeVisionLib.Impl
             if (adaptiveRect != null)
             {
                 // Draw the adaptive rectangle contour in blue
-                CvInvoke.DrawContours(outputImage, new VectorOfVectorOfPoint(new[] { adaptiveRect }), -1, new MCvScalar(255, 0, 0), 2);
+                CvInvoke.DrawContours(outputImage, new VectorOfVectorOfPoint(new[] { adaptiveRect }), -1, new MCvScalar(255, 255, 255), 2);
             }
             SaveImage(outputImage, "Perspective_rects.png");
 
 
             VectorOfPoint bestRect = ChooseBestRectangle(cannyRect, adaptiveRect);
-
-
-
 
             if (bestRect == null)
                 return EmguCvImage.FromMat(inputMat);
@@ -52,9 +50,16 @@ namespace GradeVisionLib.Impl
 
         private Mat DetectEdgesCanny(Mat image)
         {
+            // Step 1: Perform Canny edge detection
             Mat edges = new Mat();
             CvInvoke.Canny(image, edges, 50, 150);
-            return edges;
+
+            // Step 2: Apply dilation to fill in gaps in contours
+            Mat dilatedEdges = new Mat();
+            Mat structuringElement = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(3, 3), new Point(1, 1));
+            CvInvoke.Dilate(edges, dilatedEdges, structuringElement, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar(1));
+
+            return dilatedEdges;
         }
 
         private Mat DetectEdgesAdaptive(Mat image)
@@ -74,7 +79,6 @@ namespace GradeVisionLib.Impl
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             {
                 CvInvoke.FindContours(edges, contours, null, RetrType.List, ChainApproxMethod.ChainApproxSimple);
-
                 double maxArea = 0;
                 VectorOfPoint largestRectangle = null;
 
@@ -107,15 +111,12 @@ namespace GradeVisionLib.Impl
             if (rect1 == null) return rect2;
             if (rect2 == null) return rect1;
 
-            // Calculate areas
             double area1 = CvInvoke.ContourArea(rect1);
             double area2 = CvInvoke.ContourArea(rect2);
 
-            // Calculate aspect ratios
             double aspect1 = GetAspectRatio(rect1);
             double aspect2 = GetAspectRatio(rect2);
 
-            // Calculate uniformity (based on width difference or height difference)
             double uniformity1 = GetUniformity(rect1);
             double uniformity2 = GetUniformity(rect2);
 
@@ -139,20 +140,16 @@ namespace GradeVisionLib.Impl
         // Calculate uniformity by comparing the top and bottom width difference (or left and right height difference)
         private double GetUniformity(VectorOfPoint rect)
         {
-            // Get the bounding rectangle
             Rectangle boundingBox = CvInvoke.BoundingRectangle(rect);
 
-            // Calculate top and bottom width difference (for horizontal rectangles)
             double topWidth = Math.Abs(rect.ToArray()[0].X - rect.ToArray()[1].X);
             double bottomWidth = Math.Abs(rect.ToArray()[2].X - rect.ToArray()[3].X);
             double widthDiff = Math.Abs(topWidth - bottomWidth);
 
-            // Alternatively, calculate left and right height difference (for vertical rectangles)
             double leftHeight = Math.Abs(rect.ToArray()[0].Y - rect.ToArray()[3].Y);
             double rightHeight = Math.Abs(rect.ToArray()[1].Y - rect.ToArray()[2].Y);
             double heightDiff = Math.Abs(leftHeight - rightHeight);
 
-            // Return the smaller difference between width and height
             return Math.Min(widthDiff, heightDiff);
         }
 
@@ -180,7 +177,11 @@ namespace GradeVisionLib.Impl
             float maxWidth = A4_WIDTH * scaleFactor;
             float maxHeight = A4_HEIGHT * scaleFactor;
 
-            PointF[] dstPoints = GetDestinationPoints(maxWidth, maxHeight);
+            const float padding = 25f;
+            maxWidth += padding * 2;
+            maxHeight += padding * 2;
+
+            PointF[] dstPoints = GetDestinationPointsWithPadding(maxWidth, maxHeight, padding);
 
             Mat transformMatrix = CvInvoke.GetPerspectiveTransform(srcPoints, dstPoints);
 
@@ -227,14 +228,14 @@ namespace GradeVisionLib.Impl
             }
         }
 
-        private PointF[] GetDestinationPoints(float maxWidth, float maxHeight)
+        private PointF[] GetDestinationPointsWithPadding(float maxWidth, float maxHeight, float padding)
         {
             return new PointF[]
             {
-                new PointF(0, 0),
-                new PointF(maxWidth - 1, 0),
-                new PointF(0, maxHeight - 1),
-                new PointF(maxWidth - 1, maxHeight - 1)
+                new PointF(padding, padding),  // Top-left corner with padding
+                new PointF(maxWidth - padding - 1, padding),  // Top-right corner with padding
+                new PointF(padding, maxHeight - padding - 1),  // Bottom-left corner with padding
+                new PointF(maxWidth - padding - 1, maxHeight - padding - 1)  // Bottom-right corner with padding
             };
         }
 
