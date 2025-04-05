@@ -9,11 +9,11 @@ namespace GradeVisionLib.Impl
     public partial class EmguCVImageProcessor : IImageProcessor
     {
         public Mat ApplyContours(Mat inputMat)
-        {
+        {   
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             {
                 Mat hierarchy = new Mat();
-                CvInvoke.FindContours(inputMat, contours, hierarchy, RetrType.Tree, ChainApproxMethod.ChainApproxSimple);
+                CvInvoke.FindContours(ConvertToGrayscale(inputMat), contours, hierarchy, RetrType.Tree, ChainApproxMethod.ChainApproxSimple);
 
                 // Check if contours are found
                 if (contours.Size == 0)

@@ -23,7 +23,7 @@ namespace GradeVisionLib.Models
 
         public GradeScale(List<string> gradeDefinitions, List<double> thresholds)
         {
-            if (gradeDefinitions.Count -1 != thresholds.Count)
+            if (gradeDefinitions.Count - 1 != thresholds.Count)
             {
                 throw new ArgumentException("The number of grade definitions must be one more than the number of thresholds.");
             }
@@ -33,17 +33,19 @@ namespace GradeVisionLib.Models
         }
 
         public string GetGrade(double score)
-        {   
-
+        {
+            string grade = GradeDefinitions.First();
             for (int i = 0; i < Thresholds.Count; i++)
             {
                 if (score >= Thresholds[i])
                 {
-                    return GradeDefinitions[i];
+                    grade = GradeDefinitions[i + 1];
                 }
+                else
+                    break;
             }
 
-            return GradeDefinitions.Last();
+            return grade;
         }
 
         // Method to display the grade definitions and thresholds
