@@ -46,8 +46,6 @@ namespace GradeVisionLib
             return (outputDir + "/" + LatestFileName, "grade", 0);
         }
 
-
-
         public (string, string, double) ProcessAnswerSheet(string imagePath)
         {
             Mat image = _imageProcessor.LoadImage(imagePath);

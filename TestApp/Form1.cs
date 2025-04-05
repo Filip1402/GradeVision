@@ -42,7 +42,7 @@ namespace TestApp
             foreach (var imageName in inputPics)
             {
                 var answerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor(), imageName);
-                var (controlIamgePath, a, b) = answerSheetAnalyzer.ProcessControlSheet(inputFolder + controlImage);
+                var (controlIamgePath, a, b) = answerSheetAnalyzer.ProcessControlSheet(inputFolder + "Control" + "\\" + controlImage);
                 var (finalImagePath, grade, score) = answerSheetAnalyzer.ProcessAnswerSheet(inputFolder + imageName);
                 pictureBox2.Image = LoadImageWithoutLock(finalImagePath);
                 pictureBox3.Image = LoadImageWithoutLock(controlIamgePath);

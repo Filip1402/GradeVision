@@ -54,8 +54,9 @@ namespace GradeVisionLib
                 var numOfCorrectAnswersForQuestionControl = controlTestQuestion.Count((answer) => answer.IsMarked);
                 var numOfCorrectAnswersForQuestionStudent = studentTestQuestion.Count((answer) => answer.IsMarked);
 
-                if (numOfCorrectAnswersForQuestionStudent > numOfCorrectAnswersForQuestionControl)
-                    continue;
+                if (numOfCorrectAnswersForQuestionStudent != numOfCorrectAnswersForQuestionControl)
+                    throw new ArgumentException("There is a mismatch between marked answers between student and control test.");
+
 
                 var numOfCorrectStudentAnswers = 0;
                 for (var j = 0; j < controlTestQuestion.Count; j++)

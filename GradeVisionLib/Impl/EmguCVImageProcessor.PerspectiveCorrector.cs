@@ -11,25 +11,61 @@ namespace GradeVisionLib.Impl
 {
     public partial class EmguCVImageProcessor : IImageProcessor
     {
-        private const double MinContourArea = 1000;  // Minimum contour area for filtering
+        private const double MinContourArea = 1000;
 
         public Mat CorrectPerspective(Mat image)
         {
-            Mat edges = DetectEdges(image);
+            Mat cannyEdges = DetectEdgesCanny(image);
+            Mat adaptiveEdges = DetectEdgesAdaptive(image);
 
-            VectorOfPoint largestRectangle = FindLargestRectangleContour(edges);
+            VectorOfPoint cannyRect = FindLargestRectangleContour(cannyEdges);
+            VectorOfPoint adaptiveRect = FindLargestRectangleContour(adaptiveEdges);
 
-            if (largestRectangle == null)
+            Mat outputImage = image.Clone();
+
+            // Draw the contours on the output image
+            if (cannyRect != null)
+            {
+                // Draw the Canny rectangle contour in green
+                CvInvoke.DrawContours(outputImage, new VectorOfVectorOfPoint(new[] { cannyRect }), -1, new MCvScalar(0, 255, 0), 2);
+            }
+
+            if (adaptiveRect != null)
+            {
+                // Draw the adaptive rectangle contour in blue
+                CvInvoke.DrawContours(outputImage, new VectorOfVectorOfPoint(new[] { adaptiveRect }), -1, new MCvScalar(255, 0, 0), 2);
+            }
+            SaveImage(outputImage, "Perspective_rects.png");
+
+
+            VectorOfPoint bestRect = ChooseBestRectangle(cannyRect, adaptiveRect);
+
+
+
+
+            if (bestRect == null)
                 return image;
 
-            return ApplyPerspectiveCorrection(image, largestRectangle);
+            return ApplyPerspectiveCorrection(image, bestRect);
         }
 
-        private Mat DetectEdges(Mat image)
+        private Mat DetectEdgesCanny(Mat image)
         {
             Mat edges = new Mat();
-            CvInvoke.Canny(image, edges, 100, 200);
+            CvInvoke.Canny(image, edges, 50, 150);
             return edges;
+        }
+
+        private Mat DetectEdgesAdaptive(Mat image)
+        {
+            Mat thresh = new Mat();
+            CvInvoke.AdaptiveThreshold(image, thresh, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, 11, 2);
+
+            Mat morph = new Mat();
+            Mat kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(3, 3), new Point(-1, -1));
+            CvInvoke.MorphologyEx(thresh, morph, MorphOp.Close, kernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
+
+            return morph;
         }
 
         private VectorOfPoint FindLargestRectangleContour(Mat edges)
@@ -46,16 +82,16 @@ namespace GradeVisionLib.Impl
                     using (VectorOfPoint contour = contours[i])
                     {
                         double area = CvInvoke.ContourArea(contour);
-                        if (area < MinContourArea) continue; // Ignore small contours
+                        if (area < MinContourArea) continue;
 
                         using (VectorOfPoint approx = new VectorOfPoint())
                         {
                             CvInvoke.ApproxPolyDP(contour, approx, 0.02 * CvInvoke.ArcLength(contour, true), true);
 
-                            if (approx.Size == 4 && area > maxArea) // Ensure it's a quadrilateral
+                            if (approx.Size == 4 && area > maxArea)
                             {
                                 maxArea = area;
-                                largestRectangle = new VectorOfPoint(approx.ToArray()); // Clone the data
+                                largestRectangle = new VectorOfPoint(approx.ToArray());
                             }
                         }
                     }
@@ -63,6 +99,69 @@ namespace GradeVisionLib.Impl
 
                 return largestRectangle;
             }
+        }
+
+        private VectorOfPoint ChooseBestRectangle(VectorOfPoint rect1, VectorOfPoint rect2)
+        {
+            if (rect1 == null) return rect2;
+            if (rect2 == null) return rect1;
+
+            // Calculate areas
+            double area1 = CvInvoke.ContourArea(rect1);
+            double area2 = CvInvoke.ContourArea(rect2);
+
+            // Calculate aspect ratios
+            double aspect1 = GetAspectRatio(rect1);
+            double aspect2 = GetAspectRatio(rect2);
+
+            // Calculate uniformity (based on width difference or height difference)
+            double uniformity1 = GetUniformity(rect1);
+            double uniformity2 = GetUniformity(rect2);
+
+            bool isValid1 = aspect1 > 0.5 && aspect1 < 2.0;
+            bool isValid2 = aspect2 > 0.5 && aspect2 < 2.0;
+
+            // If both rectangles are valid, choose the one with the lower uniformity
+            if (isValid1 && isValid2)
+            {
+                return uniformity1 < uniformity2 ? rect1 : rect2;
+            }
+
+            // If only one is valid, return the valid one
+            if (isValid1) return rect1;
+            if (isValid2) return rect2;
+
+            // If neither is valid, return the one with the larger area
+            return area1 > area2 ? rect1 : rect2;
+        }
+
+        // Calculate uniformity by comparing the top and bottom width difference (or left and right height difference)
+        private double GetUniformity(VectorOfPoint rect)
+        {
+            // Get the bounding rectangle
+            Rectangle boundingBox = CvInvoke.BoundingRectangle(rect);
+
+            // Calculate top and bottom width difference (for horizontal rectangles)
+            double topWidth = Math.Abs(rect.ToArray()[0].X - rect.ToArray()[1].X);
+            double bottomWidth = Math.Abs(rect.ToArray()[2].X - rect.ToArray()[3].X);
+            double widthDiff = Math.Abs(topWidth - bottomWidth);
+
+            // Alternatively, calculate left and right height difference (for vertical rectangles)
+            double leftHeight = Math.Abs(rect.ToArray()[0].Y - rect.ToArray()[3].Y);
+            double rightHeight = Math.Abs(rect.ToArray()[1].Y - rect.ToArray()[2].Y);
+            double heightDiff = Math.Abs(leftHeight - rightHeight);
+
+            // Return the smaller difference between width and height
+            return Math.Min(widthDiff, heightDiff);
+        }
+
+
+        private double GetAspectRatio(VectorOfPoint contour)
+        {
+            RotatedRect box = CvInvoke.MinAreaRect(contour);
+            float w = box.Size.Width;
+            float h = box.Size.Height;
+            return w > h ? w / h : h / w;
         }
 
         private Mat ApplyPerspectiveCorrection(Mat image, VectorOfPoint largestRectangle)
@@ -99,8 +198,8 @@ namespace GradeVisionLib.Impl
 
             orderedPoints = orderedPoints.OrderBy(p => p.Y).ToArray();
 
-            PointF[] topTwo = orderedPoints.Take(2).OrderBy(p => p.X).ToArray(); // Left to right
-            PointF[] bottomTwo = orderedPoints.Skip(2).OrderBy(p => p.X).ToArray(); // Left to right
+            PointF[] topTwo = orderedPoints.Take(2).OrderBy(p => p.X).ToArray();
+            PointF[] bottomTwo = orderedPoints.Skip(2).OrderBy(p => p.X).ToArray();
 
             float detectedWidth = (float)Distance(topTwo[0], topTwo[1]);
             float detectedHeight = (float)Distance(topTwo[0], bottomTwo[0]);
@@ -109,33 +208,32 @@ namespace GradeVisionLib.Impl
             {
                 return new PointF[]
                 {
-                topTwo[0],
-                topTwo[1],
-                bottomTwo[0],
-                bottomTwo[1]
+                    topTwo[0],
+                    topTwo[1],
+                    bottomTwo[0],
+                    bottomTwo[1]
                 };
             }
             else
             {
                 return new PointF[]
                 {
-            bottomTwo[0], // New top-left (was bottom-left)
-            topTwo[0],    // New top-right (was top-left)
-            bottomTwo[1], // New bottom-left (was bottom-right)
-            topTwo[1]     // New bottom-right (was top-right)
+                    bottomTwo[0],
+                    topTwo[0],
+                    bottomTwo[1],
+                    topTwo[1]
                 };
             }
-
         }
 
         private PointF[] GetDestinationPoints(float maxWidth, float maxHeight)
         {
             return new PointF[]
             {
-                new PointF(0, 0),                      // Top-left
-                new PointF(maxWidth - 1, 0),           // Top-right
-                new PointF(0, maxHeight - 1),          // Bottom-left
-                new PointF(maxWidth - 1, maxHeight - 1) // Bottom-right
+                new PointF(0, 0),
+                new PointF(maxWidth - 1, 0),
+                new PointF(0, maxHeight - 1),
+                new PointF(maxWidth - 1, maxHeight - 1)
             };
         }
 
