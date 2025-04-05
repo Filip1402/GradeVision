@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace TestApp
@@ -12,10 +13,8 @@ namespace TestApp
     public partial class Form1 : Form
     {
         private static string controlImage = "bezRTubA.jpg";
-
-
-
         private static string inputFolder = @"C:\Users\zutif\OneDrive - Fakultet Organizacije i Informatike Varaždin\FOI\Diplomski\";
+
         private List<Result> results = new List<Result>();  // Using Result class to store data
         private List<string> inputPics = Directory.GetFiles(inputFolder, "*.*")
                                           .Where(file => file.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
@@ -28,44 +27,68 @@ namespace TestApp
             InitializeComponent();
         }
 
-        private void Form1_Load_1(object sender, EventArgs e)
+        private async void Form1_Load_1(object sender, EventArgs e)
         {
             // Initial image display
-            pictureBox1.Image = Image.FromFile(inputFolder + inputPics[inputPics.Count - 1]);
+            pictureBox1.Image = await LoadImageWithoutLockAsync(inputFolder + inputPics[inputPics.Count - 1]);
 
             // Bind the 'results' list to DataGridView
             dataGridView1.DataSource = results;
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private async void button1_Click(object sender, EventArgs e)
         {
+            var answerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor());
+
+            // Process the control sheet
+            var (controlIamgePath, a, b) = answerSheetAnalyzer.ProcessControlSheet(inputFolder + "Control" + "\\" + controlImage);
+            pictureBox3.Image = await LoadImageWithoutLockAsync(controlIamgePath);  // Show the control image right away
+
+            // Use a loop to process each answer sheet asynchronously
             foreach (var imageName in inputPics)
             {
-                var answerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor(), imageName);
-                var (controlIamgePath, a, b) = answerSheetAnalyzer.ProcessControlSheet(inputFolder + "Control" + "\\" + controlImage);
-                var (finalImagePath, grade, score) = answerSheetAnalyzer.ProcessAnswerSheet(inputFolder + imageName);
-                pictureBox2.Image = LoadImageWithoutLock(finalImagePath);
-                pictureBox3.Image = LoadImageWithoutLock(controlIamgePath);
+                // Process the answer sheet
+                var (finalImagePath, grade, score) = await Task.Run(() =>
+                    answerSheetAnalyzer.ProcessAnswerSheet(inputFolder + imageName, imageName));
+
+                // Update pictureBox1 with the current image being processed
+                pictureBox1.Image = await LoadImageWithoutLockAsync(inputFolder + imageName);  // Display relevant image in pictureBox1
+
+                // Update the picture box with the processed image (pictureBox2)
+                pictureBox2.Image = await LoadImageWithoutLockAsync(finalImagePath);
 
                 // Outputting the grade and score to the debug console
                 System.Diagnostics.Debug.WriteLine($"Grade: {grade}, Score: {score}");
 
-                // Adding the result to the list
-                results.Add(new Result(imageName, grade, score));  // Store the result in the list
+                // Add the result to the list
+                results.Add(new Result(imageName, grade, score));
+
+                // Allow UI to update after processing each image
+                await Task.Yield();  // Ensure the UI thread has a chance to update
             }
 
-            // Refresh the DataGridView to reflect the new data
+            // After the loop finishes, refresh the DataGridView to reflect the new data
             dataGridView1.DataSource = null;
             dataGridView1.DataSource = results;
         }
 
-        private Image LoadImageWithoutLock(string path)
+        private async Task<Image> LoadImageWithoutLockAsync(string path)
         {
-            using (var stream = new System.IO.MemoryStream(File.ReadAllBytes(path)))
+            // Open the file asynchronously
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
-                return Image.FromStream(stream);
+                // Read the bytes asynchronously
+                byte[] buffer = new byte[stream.Length];
+                await stream.ReadAsync(buffer, 0, (int)stream.Length);
+
+                // Create the image from the stream asynchronously
+                using (var memoryStream = new MemoryStream(buffer))
+                {
+                    return Image.FromStream(memoryStream);
+                }
             }
         }
+
 
         private void button2_Click(object sender, EventArgs e)
         {
@@ -104,7 +127,6 @@ namespace TestApp
                 if (Convert.ToInt32(row.Cells[2].Value) == -100)
                     row.DefaultCellStyle.BackColor = Color.Red;
             }
-
         }
     }
 }
@@ -112,16 +134,13 @@ namespace TestApp
 public class Result
 {
     public string Image { get; set; }
-    public string Grade { get; set; }  // The grade of the test (e.g., "A", "B", etc.)
-    public double Score { get; set; }  // The score the student achieved (e.g., 75.0, 80.0, etc.)
+    public string Grade { get; set; }
+    public double Score { get; set; }
 
-    // Constructor to initialize the result
     public Result(string image, string grade, double score)
     {
-
         Grade = grade;
         Score = score;
         Image = image;
     }
 }
-

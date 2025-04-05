@@ -9,74 +9,81 @@ namespace GradeVisionLib
     public class AnswerSheetAnalyzer
     {
         private readonly IImageProcessor _imageProcessor;
-        private readonly string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages");
         private int stepCounter = 1;
         private string LatestFileName = "";
         private Dictionary<int, List<DetectedCircleBase>> ControlAnswers;
-        public AnswerSheetAnalyzer(IImageProcessor imageProcessor, string imageName)
+        private string imageName; 
+        public AnswerSheetAnalyzer(IImageProcessor imageProcessor)
         {
             _imageProcessor = imageProcessor;
-            outputDir += "/" + imageName;
-            // Ensure output directory exists
-            if (!Directory.Exists(outputDir))
-            {
-                Directory.CreateDirectory(outputDir);
-            }
         }
 
         public (string, string, double) ProcessControlSheet(string imagePath)
         {
-            ImageData image = _imageProcessor.LoadImage(imagePath);
-            SaveStep(image, "00_Raw.png");
-
-            var preprocessingSteps = new List<Func<ImageData, ImageData>>
-                {
-                    ConvertToGrayscale,
-                    CorrectPerspective,
-                    CorrectRotation,
-                    Denoise,
-                    ApplyThresholding,
-                };
-
-            foreach (var step in preprocessingSteps)
-            {
-                image = step(image);
-            }
-
+            imageName = "control";
+            string outputDir = PrepareOutputDirectory(imageName);
+            ImageData image = ProcessImage(imagePath, outputDir);
             (image, ControlAnswers) = CircleDetection(image);
-            return (outputDir + "/" + LatestFileName, "grade", 0);
+            string imagePathWithFileName = Path.Combine(outputDir, LatestFileName);
+            return (imagePathWithFileName, "grade", 0);
         }
 
-        public (string, string, double) ProcessAnswerSheet(string imagePath)
+        public (string, string, double) ProcessAnswerSheet(string imagePath, string imageName)
         {
-            ImageData image = _imageProcessor.LoadImage(imagePath);
-            SaveStep(image, "00_Raw.png");
-
-            var preprocessingSteps = new List<Func<ImageData, ImageData>>
-                {
-                    ConvertToGrayscale,
-                    CorrectPerspective,
-                    CorrectRotation,
-                    Denoise,
-                    ApplyThresholding,
-                };
-
-            foreach (var step in preprocessingSteps)
-            {
-                image = step(image);
-            }
-
+            this.imageName = imageName;
+            string outputDir = PrepareOutputDirectory(imageName);
+            ImageData image = ProcessImage(imagePath, outputDir);
             (image, var studentAnswer) = CircleDetection(image);
+
             TestGrader grader = new TestGrader(
                 new GradeScale(new List<string> { "1", "2", "3", "4", "5" }, new List<double> { 50.00, 63.00, 75.00, 85.00 }),
                 studentAnswer,
                 ControlAnswers
-                );
+            );
 
             var (grade, score) = grader.GetGrade();
 
-            return (outputDir + "/" + LatestFileName, grade, score);
+            // Use Path.Combine to build the correct file path
+            string imagePathWithFileName = Path.Combine(outputDir, LatestFileName);
+            return (imagePathWithFileName, grade, score);
         }
+
+
+        private ImageData ProcessImage(string imagePath, string outputDir)
+        {
+            // Load initial image
+            ImageData image = _imageProcessor.LoadImage(imagePath);
+            SaveStep(image, outputDir + "/" + "00_Raw.png");
+
+            // List of preprocessing steps
+            var preprocessingSteps = new List<Func<ImageData, ImageData>>
+            {
+                ConvertToGrayscale,
+                CorrectPerspective,
+                CorrectRotation,
+                Denoise,
+                ApplyThresholding
+            };
+
+            // Apply all preprocessing steps
+            foreach (var step in preprocessingSteps)
+            {
+                image = step(image);
+            }
+
+            return image;
+        }
+
+        private string PrepareOutputDirectory(string imageName)
+        {
+            string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages", imageName);
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+            return outputDir;
+        }
+
         private ImageData ConvertToGrayscale(ImageData image) => ProcessStep(image, _imageProcessor.ConvertToGrayscale);
 
         private ImageData CorrectRotation(ImageData image) => ProcessStep(image, _imageProcessor.CorrectRotation);
@@ -93,6 +100,7 @@ namespace GradeVisionLib
         {
             ImageData result = processingFunc(image);
             string functionName = processingFunc.Method.Name;
+            System.Diagnostics.Debug.WriteLine($"Processing step: {functionName}");
             SaveStep(result, GetStepFileName(functionName));
             return result;
         }
@@ -112,7 +120,7 @@ namespace GradeVisionLib
 
         private string SaveImage(ImageData image, string fileName)
         {
-            string filePath = Path.Combine(outputDir, fileName);
+            string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages", imageName, fileName);
             if (File.Exists(filePath))
             {
                 File.Delete(filePath);
@@ -123,7 +131,7 @@ namespace GradeVisionLib
         }
 
         private string GetStepFileName(string stepName)
-        {
+        {   
             var fileName = $"{stepCounter++.ToString("D2")}_{stepName}.png";
             LatestFileName = fileName;
             return fileName;
