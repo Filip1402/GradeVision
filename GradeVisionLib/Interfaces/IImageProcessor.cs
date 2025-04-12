@@ -7,12 +7,13 @@ namespace GradeVisionLib.Interfaces
     public interface IImageProcessor
     {
         ImageData LoadImage(string imagePath);
-        ImageData CorrectRotation(ImageData image);
-        ImageData ConvertToGrayscale(ImageData inputMat);
-        ImageData Denoise(ImageData inputMat);
-        ImageData ApplyThresholding(ImageData inputMat);
-        (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData inputMat);
-        ImageData CorrectPerspective(ImageData inputMat);
-
+        ImageData CorrectRotation(ImageData inputImage);
+        ImageData ConvertToGrayscale(ImageData inputImage);
+        ImageData Denoise(ImageData inputImage);
+        ImageData ApplyThresholding(ImageData inputImage);
+        (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData inputImage);
+        ImageData CorrectPerspective(ImageData inputImage);
+        ImageData VisualizeAnswers(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers);
+        ImageData VisualizeGrade(ImageData inputImage, string grade, double score);
     }
 }

@@ -9,10 +9,10 @@ namespace GradeVisionLib.Interfaces
 {
     public abstract class DetectedCircleBase
     {
-        public float X { get; }
-        public float Y { get; }
-        public float Radius { get; }
-        public bool IsMarked { get; private set; }
+        public float X { get; set; }
+        public float Y { get; set; }
+        public float Radius { get; set; }
+        public bool IsMarked { get; set; }
 
         protected DetectedCircleBase(float x, float y, float radius)
         {
@@ -21,6 +21,8 @@ namespace GradeVisionLib.Interfaces
             Radius = radius;
             IsMarked = false;
         }
+
+        protected DetectedCircleBase() { }
 
         public void SetToMarked()
         {

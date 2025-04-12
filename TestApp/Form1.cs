@@ -1,4 +1,6 @@
-﻿using GradeVisionLib;
+﻿using Emgu.CV.Structure;
+using Emgu.CV;
+using GradeVisionLib;
 using GradeVisionLib.Impl;
 using GradeVisionLib.Models;
 using System;
@@ -12,6 +14,7 @@ namespace TestApp
 {
     public partial class Form1 : Form
     {
+        private AnswerSheetAnalyzer AnswerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor());
         private static string controlImage = "bezRTubA.jpg";
         private static string inputFolder = @"C:\Users\zutif\OneDrive - Fakultet Organizacije i Informatike Varaždin\FOI\Diplomski\";
 
@@ -29,66 +32,51 @@ namespace TestApp
 
         private async void Form1_Load_1(object sender, EventArgs e)
         {
-            // Initial image display
             pictureBox1.Image = await LoadImageWithoutLockAsync(inputFolder + inputPics[inputPics.Count - 1]);
-
-            // Bind the 'results' list to DataGridView
             dataGridView1.DataSource = results;
         }
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            var answerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor());
 
-            // Process the control sheet
-            var (controlIamgePath, a, b) = answerSheetAnalyzer.ProcessControlSheet(inputFolder + "Control" + "\\" + controlImage);
-            pictureBox3.Image = await LoadImageWithoutLockAsync(controlIamgePath);  // Show the control image right away
+            var (processedControlImage, controlAnswers) = AnswerSheetAnalyzer.ProcessControlSheet(inputFolder + "Control" + "\\" + controlImage);
+            pictureBox3.Image = (processedControlImage as EmguCvImage)?.ToMat().ToImage<Bgr, byte>().ToBitmap();
 
-            // Use a loop to process each answer sheet asynchronously
             foreach (var imageName in inputPics)
             {
-                // Process the answer sheet
-                var (finalImagePath, grade, score) = await Task.Run(() =>
-                    answerSheetAnalyzer.ProcessAnswerSheet(inputFolder + imageName, imageName));
+                var (processedImage, grade, score) = await Task.Run(() =>
+                    AnswerSheetAnalyzer.ProcessAnswerSheet(inputFolder + imageName, imageName, controlAnswers));
 
-                // Update pictureBox1 with the current image being processed
                 pictureBox1.Image = await LoadImageWithoutLockAsync(inputFolder + imageName);  // Display relevant image in pictureBox1
 
-                // Update the picture box with the processed image (pictureBox2)
-                pictureBox2.Image = await LoadImageWithoutLockAsync(finalImagePath);
+                pictureBox2.Image = (processedImage as EmguCvImage).ToMat().ToImage<Bgr, byte>().ToBitmap();
 
-                // Outputting the grade and score to the debug console
                 System.Diagnostics.Debug.WriteLine($"Grade: {grade}, Score: {score}");
 
-                // Add the result to the list
                 results.Add(new Result(imageName, grade, score));
 
-                // Allow UI to update after processing each image
-                await Task.Yield();  // Ensure the UI thread has a chance to update
+                dataGridView1.DataSource = null;
+                dataGridView1.DataSource = results;
+
+                await Task.Yield();
             }
 
-            // After the loop finishes, refresh the DataGridView to reflect the new data
-            dataGridView1.DataSource = null;
-            dataGridView1.DataSource = results;
+
         }
 
         private async Task<Image> LoadImageWithoutLockAsync(string path)
         {
-            // Open the file asynchronously
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
-                // Read the bytes asynchronously
                 byte[] buffer = new byte[stream.Length];
                 await stream.ReadAsync(buffer, 0, (int)stream.Length);
 
-                // Create the image from the stream asynchronously
                 using (var memoryStream = new MemoryStream(buffer))
                 {
                     return Image.FromStream(memoryStream);
                 }
             }
         }
-
 
         private void button2_Click(object sender, EventArgs e)
         {

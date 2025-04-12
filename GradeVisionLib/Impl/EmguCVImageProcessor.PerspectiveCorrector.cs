@@ -17,28 +17,24 @@ namespace GradeVisionLib.Impl
         {
             var inputMat = (inputImage as EmguCvImage).ToMat();
             Mat cannyEdges = DetectEdgesCanny(inputMat);
-            SaveImage(cannyEdges, "canny.png");
             Mat adaptiveEdges = DetectEdgesAdaptive(inputMat);
 
             VectorOfPoint cannyRect = FindLargestRectangleContour(cannyEdges);
             VectorOfPoint adaptiveRect = FindLargestRectangleContour(adaptiveEdges);
 
+            #region debug
             Mat outputImage = inputMat.Clone();
-
-            // Draw the contours on the output image
             if (cannyRect != null)
             {
-                // Draw the Canny rectangle contour in green
                 CvInvoke.DrawContours(outputImage, new VectorOfVectorOfPoint(new[] { cannyRect }), -1, new MCvScalar(0, 255, 0), 2);
             }
 
             if (adaptiveRect != null)
             {
-                // Draw the adaptive rectangle contour in blue
                 CvInvoke.DrawContours(outputImage, new VectorOfVectorOfPoint(new[] { adaptiveRect }), -1, new MCvScalar(255, 255, 255), 2);
             }
             SaveImage(outputImage, "Perspective_rects.png");
-
+            #endregion
 
             VectorOfPoint bestRect = ChooseBestRectangle(cannyRect, adaptiveRect);
 
@@ -117,27 +113,22 @@ namespace GradeVisionLib.Impl
             double aspect1 = GetAspectRatio(rect1);
             double aspect2 = GetAspectRatio(rect2);
 
-            double uniformity1 = GetUniformity(rect1);
-            double uniformity2 = GetUniformity(rect2);
+            bool isValid1 = aspect1 is > 0.5 and < 2.0;
+            bool isValid2 = aspect2 is > 0.5 and < 2.0;
 
-            bool isValid1 = aspect1 > 0.5 && aspect1 < 2.0;
-            bool isValid2 = aspect2 > 0.5 && aspect2 < 2.0;
-
-            // If both rectangles are valid, choose the one with the lower uniformity
             if (isValid1 && isValid2)
             {
+                double uniformity1 = GetUniformity(rect1);
+                double uniformity2 = GetUniformity(rect2);
                 return uniformity1 < uniformity2 ? rect1 : rect2;
             }
 
-            // If only one is valid, return the valid one
             if (isValid1) return rect1;
             if (isValid2) return rect2;
 
-            // If neither is valid, return the one with the larger area
             return area1 > area2 ? rect1 : rect2;
         }
 
-        // Calculate uniformity by comparing the top and bottom width difference (or left and right height difference)
         private double GetUniformity(VectorOfPoint rect)
         {
             Rectangle boundingBox = CvInvoke.BoundingRectangle(rect);
@@ -166,8 +157,8 @@ namespace GradeVisionLib.Impl
         {
             PointF[] srcPoints = OrderCorners(largestRectangle.ToArray());
 
-            float detectedWidth = (float)Distance(srcPoints[0], srcPoints[1]);
-            float detectedHeight = (float)Distance(srcPoints[1], srcPoints[2]);
+            float detectedWidth = (float)CalculateDistance(srcPoints[0], srcPoints[1]);
+            float detectedHeight = (float)CalculateDistance(srcPoints[1], srcPoints[2]);
 
             const float A4_WIDTH = 2480f;
             const float A4_HEIGHT = 3508f;
@@ -203,8 +194,8 @@ namespace GradeVisionLib.Impl
             PointF[] topTwo = orderedPoints.Take(2).OrderBy(p => p.X).ToArray();
             PointF[] bottomTwo = orderedPoints.Skip(2).OrderBy(p => p.X).ToArray();
 
-            float detectedWidth = (float)Distance(topTwo[0], topTwo[1]);
-            float detectedHeight = (float)Distance(topTwo[0], bottomTwo[0]);
+            float detectedWidth = (float)CalculateDistance(topTwo[0], topTwo[1]);
+            float detectedHeight = (float)CalculateDistance(topTwo[0], bottomTwo[0]);
 
             if (detectedHeight >= detectedWidth)
             {
@@ -230,16 +221,16 @@ namespace GradeVisionLib.Impl
 
         private PointF[] GetDestinationPointsWithPadding(float maxWidth, float maxHeight, float padding)
         {
-            return new PointF[]
-            {
+            return
+            [
                 new PointF(padding, padding),  // Top-left corner with padding
-                new PointF(maxWidth - padding - 1, padding),  // Top-right corner with padding
-                new PointF(padding, maxHeight - padding - 1),  // Bottom-left corner with padding
-                new PointF(maxWidth - padding - 1, maxHeight - padding - 1)  // Bottom-right corner with padding
-            };
+                new PointF(maxWidth - 1 - padding , padding),  // Top-right corner with padding
+                new PointF(padding, maxHeight - 1 - padding ),  // Bottom-left corner with padding
+                new PointF(maxWidth - 1 - padding , maxHeight  - 1 - padding )  // Bottom-right corner with padding
+            ];
         }
 
-        private double Distance(PointF p1, PointF p2)
+        private double CalculateDistance(PointF p1, PointF p2)
         {
             return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
         }

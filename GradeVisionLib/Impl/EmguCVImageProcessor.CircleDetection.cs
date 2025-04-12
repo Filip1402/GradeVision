@@ -128,7 +128,6 @@ namespace GradeVisionLib.Impl
                     break;
                 }
             }
-
             return bestYPos;
         }
 
@@ -146,14 +145,10 @@ namespace GradeVisionLib.Impl
                 if (isCircleGroupValid(uniformCircles, outputImage))
                     validGroups.Add(group.Key, uniformCircles);
             }
-
             return validGroups;
         }
 
-        private List<DetectedCircleBase> SortCirclesByXPosition(List<DetectedCircleBase> circles)
-        {
-            return circles.OrderBy(c => c.X).ToList();
-        }
+        private List<DetectedCircleBase> SortCirclesByXPosition(List<DetectedCircleBase> circles) { return circles.OrderBy(c => c.X).ToList(); }
 
         private List<DetectedCircleBase> GetOnlyNonNestedCircles(List<DetectedCircleBase> circles)
         {
@@ -181,6 +176,7 @@ namespace GradeVisionLib.Impl
             var tolerance = averageDeltaX * 0.05;
 
             bool isValid = !deltas.Any(delta => Math.Abs(delta - averageDeltaX) > tolerance);
+            //debug
             if (!isValid)
             {
                 foreach (var circle in circles)
@@ -203,7 +199,6 @@ namespace GradeVisionLib.Impl
             var distanceSquared = dx * dx + dy * dy;
 
             var largerRadius = Math.Max(inner.Radius, outer.Radius);
-
             return distanceSquared < (largerRadius * largerRadius);
         }
 

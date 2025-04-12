@@ -8,19 +8,24 @@ namespace GradeVisionLib.Impl
 {
     public partial class EmguCVImageProcessor : IImageProcessor
     {
+        private const double NOISE_LEVEL_THRESHOLD = 1.5;
+        private const float DENOISE_STRENGH = 10;
+
+
         public ImageData Denoise(ImageData inputImage)
         {
             var inputMat = (inputImage as EmguCvImage).ToMat();
             double noiseLevel = EstimateNoiseLevel(inputMat);
 
-            if (noiseLevel >= 1.5) // High/mid noise 
+            if (noiseLevel >= NOISE_LEVEL_THRESHOLD)
             {
-                inputMat = ApplyNonLocalMeansDenoising(inputMat, h: 10.0); // Mild edge-preserving denoising
+                inputMat = ApplyNonLocalMeansDenoising(inputMat);
+                //debug
                 AddOperationText(inputMat, $"{noiseLevel:F2} NL-Means");
             }
-            else // Very clean
+            else
             {
-                // Skip denoising to preserve maximum detail
+                //debug
                 AddOperationText(inputMat, $"{noiseLevel:F2} No Denoise");
             }
 
@@ -44,11 +49,11 @@ namespace GradeVisionLib.Impl
             }
         }
 
-        private Mat ApplyNonLocalMeansDenoising(Mat image, double h = 3.0)
+        private Mat ApplyNonLocalMeansDenoising(Mat image)
         {
             Mat result = new Mat();
             CvInvoke.FastNlMeansDenoising(image, result,
-                h: (float)h,
+                h: DENOISE_STRENGH,
                 templateWindowSize: 5,
                 searchWindowSize: 15);
             return result;
@@ -61,7 +66,7 @@ namespace GradeVisionLib.Impl
             CvInvoke.PutText(image, text,
                 new Point(10, 30), FontFace.HersheySimplex,
                 fontScale: 1.0,
-                color: new MCvScalar(0, 255, 0), thickness: 2); // Green text overlay
+                color: new MCvScalar(0, 255, 0), thickness: 2);
         }
 
         #endregion

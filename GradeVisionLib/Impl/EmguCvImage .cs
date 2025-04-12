@@ -13,10 +13,9 @@ namespace GradeVisionLib.Impl
     {
         private Mat _mat;
 
-        // Empty constructor (initializes an empty EmguCvImage)
         public EmguCvImage() : base(0, 0, 0, null)
         {
-            _mat = new Mat();  // Empty Mat
+            _mat = new Mat();
         }
         public EmguCvImage(Mat mat) : base(mat.Width, mat.Height, mat.NumberOfChannels, GetDataFromMat(mat))
         {
@@ -48,5 +47,9 @@ namespace GradeVisionLib.Impl
             return buffer;
         }
 
+        public override ImageData Clone()
+        {
+            return new EmguCvImage(this._mat);
+        }
     }
 }

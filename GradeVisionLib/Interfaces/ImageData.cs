@@ -20,5 +20,7 @@ namespace GradeVisionLib.Interfaces
             Channels = channels;
             Data = data;
         }
+        public abstract ImageData Clone();
+
     }
 }

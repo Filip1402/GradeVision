@@ -7,10 +7,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace GradeVisionLib.Impl
 {
-    public class EmguCVCircle : DetectedCircleBase
+    [NoArgsConstructor]
+    public partial class EmguCVCircle : DetectedCircleBase
     {
+
         private EmguCVCircle(float x, float y, float radius) : base(x, y, radius)
         {
         }

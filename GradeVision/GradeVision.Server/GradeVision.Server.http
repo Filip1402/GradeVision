@@ -1,0 +1,6 @@
+@GradeVision.Server_HostAddress = http://localhost:5022
+
+GET {{GradeVision.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
