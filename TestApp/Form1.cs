@@ -9,78 +9,35 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Diagnostics;
+using GradeVisionLib.Interfaces;
+using System.ComponentModel;
 
 namespace TestApp
 {
     public partial class Form1 : Form
     {
-        private AnswerSheetAnalyzer AnswerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor());
         private static string controlImage = "bezRTubA.jpg";
         private static string inputFolder = @"C:\Users\zutif\OneDrive - Fakultet Organizacije i Informatike Varaždin\FOI\Diplomski\";
+        private AnswerSheetAnalyzer AnswerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor());
+        private String ControlTestPath { get; set; }
+        private List<String> TestsToGradePaths { get; set; }
+        private Dictionary<int, List<DetectedCircleBase>> ControlAnswers { get; set; }
 
-        private List<Result> results = new List<Result>();  // Using Result class to store data
-        private List<string> inputPics = Directory.GetFiles(inputFolder, "*.*")
-                                          .Where(file => file.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
-                                                         file.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                                                         file.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
-                                          .Select(Path.GetFileName).ToList();
+        private BindingList<Result> results = new BindingList<Result>();  // Using Result class to store data
 
         public Form1()
         {
             InitializeComponent();
         }
 
-        private async void Form1_Load_1(object sender, EventArgs e)
+        private void Form1_Load_1(object sender, EventArgs e)
         {
-            pictureBox1.Image = await LoadImageWithoutLockAsync(inputFolder + inputPics[inputPics.Count - 1]);
             dataGridView1.DataSource = results;
-        }
-
-        private async void button1_Click(object sender, EventArgs e)
-        {
-
-            var (processedControlImage, controlAnswers) = AnswerSheetAnalyzer.ProcessControlSheet(inputFolder + "Control" + "\\" + controlImage);
-            pictureBox3.Image = (processedControlImage as EmguCvImage)?.ToMat().ToImage<Bgr, byte>().ToBitmap();
-
-            foreach (var imageName in inputPics)
-            {
-                var (processedImage, grade, score) = await Task.Run(() =>
-                    AnswerSheetAnalyzer.ProcessAnswerSheet(inputFolder + imageName, imageName, controlAnswers));
-
-                pictureBox1.Image = await LoadImageWithoutLockAsync(inputFolder + imageName);  // Display relevant image in pictureBox1
-
-                pictureBox2.Image = (processedImage as EmguCvImage).ToMat().ToImage<Bgr, byte>().ToBitmap();
-
-                System.Diagnostics.Debug.WriteLine($"Grade: {grade}, Score: {score}");
-
-                results.Add(new Result(imageName, grade, score));
-
-                dataGridView1.DataSource = null;
-                dataGridView1.DataSource = results;
-
-                await Task.Yield();
-            }
-
-
-        }
-
-        private async Task<Image> LoadImageWithoutLockAsync(string path)
-        {
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
-            {
-                byte[] buffer = new byte[stream.Length];
-                await stream.ReadAsync(buffer, 0, (int)stream.Length);
-
-                using (var memoryStream = new MemoryStream(buffer))
-                {
-                    return Image.FromStream(memoryStream);
-                }
-            }
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            
             var test = new Test((int)numericUpDown1.Value, (int)numericUpDown2.Value);
             test.GetAnswerSheet();
         }
@@ -95,6 +52,91 @@ namespace TestApp
                 }
             }
         }
+
+        private void btnLoadControlTest_Click(object sender, EventArgs e)
+        {
+            openFileDialog1.ShowDialog();
+        }
+
+        private async void openFileDialog1_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ControlTestPath = openFileDialog1.FileName;
+
+            try
+            {
+                picControlTest.Image = await LoadImageWithoutLockAsync(ControlTestPath);
+                await Task.Yield();
+                ( var processedControlImage, ControlAnswers) = await Task.Run(() =>
+                    AnswerSheetAnalyzer.ProcessControlSheet(ControlTestPath));
+                picControlTest.Image = (processedControlImage as EmguCvImage)?.ToMat().ToImage<Bgr, byte>().ToBitmap();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load image: {ex.Message}");
+            }
+        }
+
+        private async void openMultiFileDialog_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            TestsToGradePaths = openMultiFileDialog.FileNames.ToList();
+            try
+            {
+                picTestToBeGraded.Image = await LoadImageWithoutLockAsync(TestsToGradePaths.First());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load image: {ex.Message}");
+            }
+
+        }
+
+        private void btnLoadTestsToGrade_Click(object sender, EventArgs e)
+        {
+            openMultiFileDialog.ShowDialog();
+
+        }
+
+        private async void btnGradeTests_Click(object sender, EventArgs e)
+        {
+
+            if(ControlAnswers.Count == 0 || TestsToGradePaths.Count == 0)
+            {
+                MessageBox.Show("Greška!!!", "Kontrolni test i testovi za ocijenjivanje moraju biti učitani prije ocjenjivanja!!!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            foreach (var imagePath in TestsToGradePaths)
+            {
+                picTestToBeGraded.Image = await LoadImageWithoutLockAsync(imagePath);
+
+                var (processedImage, grade, score) = await Task.Run(() =>
+                    AnswerSheetAnalyzer.ProcessAnswerSheet(imagePath, ControlAnswers));
+
+                picxGradedTests.Image = (processedImage as EmguCvImage).ToMat().ToImage<Bgr, byte>().ToBitmap();
+
+                System.Diagnostics.Debug.WriteLine($"Grade: {grade}, Score: {score}");
+                results.Add(new Result(Path.GetFileName(imagePath), grade, score));
+                await Task.Yield();
+            }
+
+            ControlAnswers.Clear();
+        }
+
+
+        #region Helper functions
+        private async Task<Image> LoadImageWithoutLockAsync(string path)
+        {
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
+            {
+                byte[] buffer = new byte[stream.Length];
+                await stream.ReadAsync(buffer, 0, (int)stream.Length);
+
+                using (var memoryStream = new MemoryStream(buffer))
+                {
+                    return Image.FromStream(memoryStream);
+                }
+            }
+        }
+        #endregion
     }
 }
 

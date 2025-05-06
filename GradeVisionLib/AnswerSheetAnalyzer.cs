@@ -26,10 +26,11 @@ namespace GradeVisionLib
             return (proccedImage, controlAnswers);
         }
 
-        public (ImageData, string, double) ProcessAnswerSheet(string imagePath, string imageName, Dictionary<int, List<DetectedCircleBase>> controlAnswers)
+        public (ImageData, string, double) ProcessAnswerSheet(string imagePath, Dictionary<int, List<DetectedCircleBase>> controlAnswers)
         {
-            this.currentImageName = imageName;
-            string outputDir = PrepareOutputDirectory(imageName);
+            
+            this.currentImageName = Path.GetFileName(imagePath);
+            string outputDir = PrepareOutputDirectory(currentImageName);
             var (rawImage, proccedImage) = ProcessImage(imagePath, outputDir);
             (proccedImage, var studentAnswers) = CircleDetection(proccedImage);
 
