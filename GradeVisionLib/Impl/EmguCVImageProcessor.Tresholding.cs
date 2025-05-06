@@ -11,7 +11,7 @@ namespace GradeVisionLib.Impl
             var inputMat = (inputImage as EmguCvImage).ToMat();
             Mat threshMat = new Mat();
             CvInvoke.AdaptiveThreshold(inputMat, threshMat, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, 11, 2);
-            return EmguCvImage.FromMat(threshMat);
+            return EmguCvImage.FromMat(threshMat, inputImage.Name);
         }
     }
 }

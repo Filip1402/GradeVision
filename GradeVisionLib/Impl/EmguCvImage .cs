@@ -13,25 +13,26 @@ namespace GradeVisionLib.Impl
     {
         private Mat _mat;
 
-        public EmguCvImage() : base(0, 0, 0, null)
+        public EmguCvImage() : base("",0, 0, 0, null)
         {
             _mat = new Mat();
         }
-        public EmguCvImage(Mat mat) : base(mat.Width, mat.Height, mat.NumberOfChannels, GetDataFromMat(mat))
+        public EmguCvImage(Mat mat, string name) : base(name, mat.Width, mat.Height, mat.NumberOfChannels, GetDataFromMat(mat))
         {
             _mat = mat ?? throw new ArgumentNullException(nameof(mat));
         }
         public static EmguCvImage FromFile(string imagePath)
         {
+            string fileName = Path.GetFileName(imagePath);
             Mat image = CvInvoke.Imread(imagePath, ImreadModes.Color);
             if (image.IsEmpty)
                 throw new ArgumentException("Failed to load image from path.");
-            return new EmguCvImage(image);
+            return new EmguCvImage(image, fileName);
         }
 
-        public static EmguCvImage FromMat(Mat mat)
+        public static EmguCvImage FromMat(Mat mat, string imageName)
         {
-            return new EmguCvImage(mat);
+            return new EmguCvImage(mat, imageName);
         }
 
         public Mat ToMat()
@@ -49,7 +50,7 @@ namespace GradeVisionLib.Impl
 
         public override ImageData Clone()
         {
-            return new EmguCvImage(this._mat);
+            return new EmguCvImage(this._mat,this.Name);
         }
     }
 }

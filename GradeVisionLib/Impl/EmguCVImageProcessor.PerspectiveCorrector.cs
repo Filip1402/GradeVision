@@ -39,9 +39,9 @@ namespace GradeVisionLib.Impl
             VectorOfPoint bestRect = ChooseBestRectangle(cannyRect, adaptiveRect);
 
             if (bestRect == null)
-                return EmguCvImage.FromMat(inputMat);
+                return EmguCvImage.FromMat(inputMat, inputImage.Name);
 
-            return EmguCvImage.FromMat(ApplyPerspectiveCorrection(inputMat, bestRect));
+            return EmguCvImage.FromMat(ApplyPerspectiveCorrection(inputMat, bestRect), inputImage.Name);
         }
 
         private Mat DetectEdgesCanny(Mat image)

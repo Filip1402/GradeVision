@@ -23,7 +23,7 @@ namespace GradeVisionLib.Impl
                 inputMat = RotateImage(inputMat, 180);
             }
 
-            return EmguCvImage.FromMat(inputMat);
+            return EmguCvImage.FromMat(inputMat, inputImage.Name);
         }
 
         private Mat RotateImage(Mat image, double angle)

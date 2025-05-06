@@ -80,31 +80,8 @@ namespace TestApp
 
         private void button2_Click(object sender, EventArgs e)
         {
-            var gradeDefinisons = new List<string> { "1", "2", "3", "4", "5" };
-            var gradeThresholds = new List<double> { 50.00, 63.00, 75.00, 85.00 };
-
-            var gradeScale = new GradeScale(gradeDefinisons, gradeThresholds);
-            var test = new Test(gradeScale);
-
-            test.Name = "Test 1";
-            test.SubjectName = "Math";
-            test.TeacherName = "John Doe";
-
-            Answer a = new Answer("A");
-            Answer b = new Answer("B");
-            Answer c = new Answer("C");
-            Answer d = new Answer("D");
-            var allAnswers = new List<Answer> { a, b, c, d };
-            var correctAnswer1 = new List<Answer> { a, c };
-            test.AddQuestion(new MultipleChoiceQuestion(allAnswers, correctAnswer1, 2));
-            test.AddQuestion(new MultipleChoiceQuestion(allAnswers, correctAnswer1, 2));
-            test.AddQuestion(new MultipleChoiceQuestion(allAnswers, correctAnswer1, 2));
-            test.AddQuestion(new MultipleChoiceQuestion(allAnswers, correctAnswer1, 2));
-            test.AddQuestion(new MultipleChoiceQuestion(allAnswers, correctAnswer1, 2));
-            test.AddQuestion(new MultipleChoiceQuestion(allAnswers, correctAnswer1, 2));
-            test.AddQuestion(new MultipleChoiceQuestion(allAnswers, correctAnswer1, 2));
-            test.AddQuestion(new MultipleChoiceQuestion(allAnswers, correctAnswer1, 2));
-
+            
+            var test = new Test((int)numericUpDown1.Value, (int)numericUpDown2.Value);
             test.GetAnswerSheet();
         }
 
@@ -112,8 +89,10 @@ namespace TestApp
         {
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
-                if (Convert.ToInt32(row.Cells[2].Value) == -100)
+                if (row.Cells[2].Value != null && int.TryParse(row.Cells[2].Value.ToString(), out int cellValue) && cellValue == -100)
+                {
                     row.DefaultCellStyle.BackColor = Color.Red;
+                }
             }
         }
     }

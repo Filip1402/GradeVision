@@ -32,7 +32,7 @@ namespace GradeVisionLib.Impl
                 }
             }
 
-            return EmguCvImage.FromMat(outputMat); // Return the image with drawn circles
+            return EmguCvImage.FromMat(outputMat, inputImage.Name); // Return the image with drawn circles
         }
 
         // This method visualizes the grade and score on the image
@@ -58,7 +58,7 @@ namespace GradeVisionLib.Impl
             CvInvoke.PutText(outputMat, gradeText, gradePosition, fontFace, fontScale, new MCvScalar(0, 0, 255), fontThickness);
             CvInvoke.PutText(outputMat, scoreText, scorePosition, fontFace, fontScale, new MCvScalar(0, 0, 255), fontThickness);
 
-            return EmguCvImage.FromMat(outputMat); // Return the image with grade and score
+            return EmguCvImage.FromMat(outputMat, inputImage.Name); // Return the image with grade and score
         }
 
         private Mat ConvertToColorIfNeeded(Mat inputMat)

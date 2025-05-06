@@ -3,6 +3,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
 using GradeVisionLib.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -16,50 +17,103 @@ namespace GradeVisionLib.Impl
         private static readonly MCvScalar UNMARKED_CIRCLE_COLOR = new MCvScalar(0, 0, 255);
         private static readonly MCvScalar MARKED_CIRCLE_COLOR = new MCvScalar(0, 255, 0);
 
-        private const int MIN_CIRCLE_RADIUS = 8;
+        private const int MIN_CIRCLE_RADIUS = 10;
         private const int MAX_CIRCLE_RADIUS = 50;
-        private const int MAX_VERTICAL_GROUP_DISTANCE = 15; //inPx
+        private const int MAX_VERTICAL_GROUP_DISTANCE = 15;//px
+        private const double POSITION_DUPLICATE_DIFFERENCE_THRESHOLD = 8f;
+        private const double RADIUS_DUPLICATE_DIFFERENCE_THRESHOLD = 5f;
         public (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData input)
         {
             var inputMat = (input as EmguCvImage).ToMat();
             var outputMat = new EmguCvImage().ToMat();
             //for debug
             CvInvoke.CvtColor(inputMat, outputMat, ColorConversion.Gray2Bgr);
-
             var allCircles = DetectAllCircles(inputMat, outputMat);
 
             var sortedCircleGroups = GroupAndSortCirclesByYPosition(allCircles);
+            var random = new Random();
+
+            foreach (var group in sortedCircleGroups)
+            {
+                // Generate a unique random color for this group (unmarked circles)
+                var groupColor = new MCvScalar(
+                random.Next(50, 256), // Avoid very dark colors
+                    random.Next(50, 256),
+                    random.Next(50, 256)
+                );
+
+                foreach (EmguCVCircle circle in group.Value)
+                {
+
+                    CvInvoke.Circle(outputMat,
+                        new Point((int)circle.X, (int)circle.Y),
+                        (int)circle.Radius,
+                        groupColor,
+                        1);
+                }
+
+            }
 
             var filteredGroups = FilterInvalidGroups(sortedCircleGroups, outputMat);
 
-            double averageFillPercent = filteredGroups.Any()
-                                        ? filteredGroups.SelectMany(group => group.Value)
-                                        .Average(circle => GetFillPercentage(inputMat, (EmguCVCircle)circle))
-                                        : 0;
+            var fillPercentages = filteredGroups.SelectMany(group => group.Value)
+                                                .Select(c => GetFillPercentage(inputMat, (EmguCVCircle)c))
+                                                .ToList();
+
+            double threshold = CalculateFillPercentageTreshold(fillPercentages);
 
             foreach (var group in filteredGroups)
             {
+                // Generate a unique random color for this group (unmarked circles)
+                var groupColor = new MCvScalar(
+                random.Next(50, 256), // Avoid very dark colors
+                    random.Next(50, 256),
+                    random.Next(50, 256)
+                );
+
                 foreach (EmguCVCircle circle in group.Value)
                 {
-                    double fillPercent = GetFillPercentage(inputMat, circle);
-                    if (fillPercent > averageFillPercent)
+                    double fillPercent = Math.Floor(GetFillPercentage(inputMat, circle));
+
+                    bool isMarked = fillPercent > threshold;
+                    if (isMarked)
                     {
                         circle.SetToMarked();
                     }
-                    //debug
-                    var color = fillPercent > averageFillPercent ?
-                        MARKED_CIRCLE_COLOR :
-                        UNMARKED_CIRCLE_COLOR;
+
+                    // Use marked color or group-specific color
+                    var color = isMarked ? MARKED_CIRCLE_COLOR : groupColor;
 
                     CvInvoke.Circle(outputMat,
                         new Point((int)circle.X, (int)circle.Y),
                         (int)circle.Radius,
                         color,
-                        2);
+                        1);
                 }
+
+                FillPercentageHistogram.GenerateHistogramAndSaveImage(
+                fillPercentages,
+                threshold,
+                input.Name);
+            }
+            return (EmguCvImage.FromMat(outputMat, input.Name), filteredGroups);
+        }
+
+        private double CalculateFillPercentageTreshold(List<double> fillPercentages)
+        {
+            var histogram = new List<int>(new int[101]);
+            fillPercentages.ForEach(fill => histogram[(int)Math.Floor(fill)]++);
+
+            var startOfFirstPeak = histogram.FindIndex(x => x > 0);
+            var endOfFirstPeak = histogram.Skip(startOfFirstPeak+1).ToList().FindIndex(x => x == 0) + startOfFirstPeak+1;
+            
+            while (endOfFirstPeak + 2 < histogram.Count &&
+                   (histogram[endOfFirstPeak + 1] > 0 || histogram[endOfFirstPeak + 2] > 0))
+            {
+                endOfFirstPeak++;
             }
 
-            return (EmguCvImage.FromMat(outputMat), filteredGroups);
+            return endOfFirstPeak;
         }
 
         private List<DetectedCircleBase> DetectAllCircles(Mat grayMat, Mat outputImage)
@@ -67,32 +121,51 @@ namespace GradeVisionLib.Impl
             VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint();
             CvInvoke.FindContours(grayMat, contours, null, RetrType.List, ChainApproxMethod.ChainApproxSimple);
 
-            var circles = new List<DetectedCircleBase>();
+            var rawCircles = new List<DetectedCircleBase>();
 
             foreach (var contour in contours.ToArrayOfArray())
             {
                 using (VectorOfPoint contourPoints = new VectorOfPoint(contour))
                 {
-
-                    if (contourPoints.Size >= 10)
+                    if (contourPoints.Size >= 20)
                     {
                         RotatedRect ellipse = CvInvoke.FitEllipse(contourPoints);
                         var circle = new CircleF(ellipse.Center, (float)(ellipse.Size.Width / 2));
                         if (circle.Radius > MIN_CIRCLE_RADIUS && circle.Radius < MAX_CIRCLE_RADIUS)
                         {
-
-                            circles.Add(EmguCVCircle.FromCircleF(circle));
-                            //debug
-                            CvInvoke.Circle(outputImage,
-                                new Point((int)circle.Center.X, (int)circle.Center.Y),
-                                (int)circle.Radius,
-                                new MCvScalar(255, 255, 0),
-                                2);
+                            rawCircles.Add(EmguCVCircle.FromCircleF(circle));
                         }
                     }
                 }
             }
-            return circles;
+            var nonDuplicateCircles = FilterDuplicateCircles(rawCircles);
+
+            return GetOnlyNonNestedCircles(nonDuplicateCircles, outputImage);
+        }
+
+        private static List<DetectedCircleBase> FilterDuplicateCircles(List<DetectedCircleBase> rawCircles)
+        {
+            var filteredCircles = new List<DetectedCircleBase>();
+
+
+            foreach (var circle in rawCircles)
+            {
+                bool isDuplicate = filteredCircles.Any(existing =>
+                {
+                    float dx = circle.X - existing.X;
+                    float dy = circle.Y - existing.Y;
+                    float dr = circle.Radius - existing.Radius;
+                    return (dx * dx + dy * dy) <= (POSITION_DUPLICATE_DIFFERENCE_THRESHOLD * POSITION_DUPLICATE_DIFFERENCE_THRESHOLD)
+                           && Math.Abs(dr) <= RADIUS_DUPLICATE_DIFFERENCE_THRESHOLD;
+                });
+
+                if (!isDuplicate)
+                {
+                    filteredCircles.Add(circle);
+                }
+            }
+
+            return filteredCircles;
         }
 
         private Dictionary<int, List<DetectedCircleBase>> GroupAndSortCirclesByYPosition(List<DetectedCircleBase> circles)
@@ -101,7 +174,7 @@ namespace GradeVisionLib.Impl
             foreach (EmguCVCircle circle in circles)
             {
                 int y = (int)circle.Y;
-                int? closestGroupKey = FindClosestGroupKey(y, MAX_VERTICAL_GROUP_DISTANCE, circleGroups.Keys.ToList());
+                int? closestGroupKey = FindClosestGroupKey(y, circleGroups.Keys.ToList());
 
                 if (closestGroupKey.HasValue)
                 {
@@ -116,18 +189,21 @@ namespace GradeVisionLib.Impl
                 .ToDictionary(g => g.Key, g => g.Value);
         }
 
-        private int? FindClosestGroupKey(int currentY, int maxDistance, List<int> yPositions)
+        private int? FindClosestGroupKey(int currentY, List<int> yPositions)
         {
             int? bestYPos = null;
+            int smallestDifference = int.MaxValue;
 
             foreach (int yPos in yPositions)
             {
-                if (Math.Abs(yPos - currentY) <= maxDistance)
+                int diff = Math.Abs(yPos - currentY);
+                if (diff <= MAX_VERTICAL_GROUP_DISTANCE && diff < smallestDifference)
                 {
+                    smallestDifference = diff;
                     bestYPos = yPos;
-                    break;
                 }
             }
+
             return bestYPos;
         }
 
@@ -139,7 +215,7 @@ namespace GradeVisionLib.Impl
                 var circles = group.Value;
 
                 var sortedCircles = SortCirclesByXPosition(circles);
-                var nonNestedCircles = GetOnlyNonNestedCircles(sortedCircles);
+                var nonNestedCircles = GetOnlyNonNestedCircles(sortedCircles, outputImage, sortedCircles.Average(it => it.Y));
                 var uniformCircles = GetCirclesWithUniformRadius(nonNestedCircles);
 
                 if (isCircleGroupValid(uniformCircles, outputImage))
@@ -150,11 +226,35 @@ namespace GradeVisionLib.Impl
 
         private List<DetectedCircleBase> SortCirclesByXPosition(List<DetectedCircleBase> circles) { return circles.OrderBy(c => c.X).ToList(); }
 
-        private List<DetectedCircleBase> GetOnlyNonNestedCircles(List<DetectedCircleBase> circles)
+        private List<DetectedCircleBase> GetOnlyNonNestedCircles(List<DetectedCircleBase> circles, Mat outputImage, double averageYPosition = -1)
         {
-            return circles
-                .Where(circle => !circles.Any(other => !circle.Equals(other) && IsInside(circle, other) && circle.Radius < other.Radius))
+            var result = circles
+                .Where(circle => !circles.Any(other =>
+                    !circle.Equals(other) &&
+                    (circle.GetRelationTo(other) == CircleRelation.ThisInsideOther && circle.Radius < other.Radius ||
+                    IsCircleOverlaping(averageYPosition, circle, other, circle.GetRelationTo(other)))
+                ))
                 .ToList();
+            //debug logic
+            var nestedCircles = circles
+                .Where(circle => !result.Contains(circle))
+                .ToList();
+
+            nestedCircles.ForEach(circle =>
+            {
+                CvInvoke.Circle(outputImage,
+                                new Point((int)circle.X, (int)circle.Y),
+                                (int)circle.Radius,
+                                new MCvScalar(255, 0, 0),
+                                1);
+            });
+
+            return result;
+        }
+
+        private static bool IsCircleOverlaping(double averageYPosition, DetectedCircleBase circle, DetectedCircleBase other, CircleRelation relation)
+        {
+            return averageYPosition != -1 && relation == CircleRelation.Intersecting && (Math.Abs(circle.Y - averageYPosition)) > (Math.Abs(other.Y - averageYPosition));
         }
 
         private List<DetectedCircleBase> GetCirclesWithUniformRadius(List<DetectedCircleBase> circles)
@@ -173,10 +273,10 @@ namespace GradeVisionLib.Impl
                 .ToList();
 
             var averageDeltaX = deltas.Average();
-            var tolerance = averageDeltaX * 0.05;
+            var tolerance = averageDeltaX * 0.10;
 
             bool isValid = !deltas.Any(delta => Math.Abs(delta - averageDeltaX) > tolerance);
-            //debug
+            //debug logic
             if (!isValid)
             {
                 foreach (var circle in circles)
@@ -185,21 +285,11 @@ namespace GradeVisionLib.Impl
                     new Point((int)circle.X, (int)circle.Y),
                     (int)circle.Radius,
                     new MCvScalar(0, 255, 255),
-                    2);
+                    1);
                 }
 
             }
             return isValid;
-        }
-
-        private bool IsInside(DetectedCircleBase inner, DetectedCircleBase outer)
-        {
-            var dx = inner.X - outer.X;
-            var dy = inner.Y - outer.Y;
-            var distanceSquared = dx * dx + dy * dy;
-
-            var largerRadius = Math.Max(inner.Radius, outer.Radius);
-            return distanceSquared < (largerRadius * largerRadius);
         }
 
         private double GetFillPercentage(Mat thresholdedImage, EmguCVCircle circle)

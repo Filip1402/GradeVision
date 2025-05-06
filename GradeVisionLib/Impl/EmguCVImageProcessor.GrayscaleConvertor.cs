@@ -16,7 +16,7 @@ namespace GradeVisionLib.Impl
             var inputMat = (inputImage as EmguCvImage).ToMat();
             Mat grayMat = new Mat();
             CvInvoke.CvtColor(inputMat, grayMat, ColorConversion.Bgr2Gray);
-            return EmguCvImage.FromMat(grayMat);
+            return EmguCvImage.FromMat(grayMat, inputImage.Name);
         }
     }
 }

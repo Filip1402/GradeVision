@@ -29,7 +29,7 @@ namespace GradeVisionLib.Impl
                 AddOperationText(inputMat, $"{noiseLevel:F2} No Denoise");
             }
 
-            return EmguCvImage.FromMat(inputMat);
+            return EmguCvImage.FromMat(inputMat, inputImage.Name);
         }
 
         #region Supporting Methods

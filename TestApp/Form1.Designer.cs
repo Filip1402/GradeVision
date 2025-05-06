@@ -34,10 +34,14 @@
             button2 = new Button();
             dataGridView1 = new DataGridView();
             pictureBox3 = new PictureBox();
+            numericUpDown1 = new NumericUpDown();
+            numericUpDown2 = new NumericUpDown();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox3).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
             SuspendLayout();
             // 
             // button1
@@ -71,7 +75,7 @@
             // 
             // button2
             // 
-            button2.Location = new Point(1033, 237);
+            button2.Location = new Point(1033, 265);
             button2.Name = "button2";
             button2.Size = new Size(200, 78);
             button2.TabIndex = 4;
@@ -102,11 +106,33 @@
             pictureBox3.TabIndex = 6;
             pictureBox3.TabStop = false;
             // 
+            // numericUpDown1
+            // 
+            numericUpDown1.Location = new Point(1033, 237);
+            numericUpDown1.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
+            numericUpDown1.Minimum = new decimal(new int[] { 8, 0, 0, 0 });
+            numericUpDown1.Name = "numericUpDown1";
+            numericUpDown1.Size = new Size(87, 23);
+            numericUpDown1.TabIndex = 7;
+            numericUpDown1.Value = new decimal(new int[] { 8, 0, 0, 0 });
+            // 
+            // numericUpDown2
+            // 
+            numericUpDown2.Location = new Point(1151, 236);
+            numericUpDown2.Maximum = new decimal(new int[] { 8, 0, 0, 0 });
+            numericUpDown2.Minimum = new decimal(new int[] { 4, 0, 0, 0 });
+            numericUpDown2.Name = "numericUpDown2";
+            numericUpDown2.Size = new Size(82, 23);
+            numericUpDown2.TabIndex = 8;
+            numericUpDown2.Value = new decimal(new int[] { 4, 0, 0, 0 });
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1688, 630);
+            Controls.Add(numericUpDown2);
+            Controls.Add(numericUpDown1);
             Controls.Add(pictureBox3);
             Controls.Add(dataGridView1);
             Controls.Add(button2);
@@ -121,6 +147,8 @@
             ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox3).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown2).EndInit();
             ResumeLayout(false);
 
         }
@@ -132,6 +160,8 @@
         private Button button2;
         private DataGridView dataGridView1;
         private PictureBox pictureBox3;
+        private NumericUpDown numericUpDown1;
+        private NumericUpDown numericUpDown2;
     }
 }
 

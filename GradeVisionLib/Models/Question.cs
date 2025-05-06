@@ -6,20 +6,24 @@ using System.Threading.Tasks;
 
 namespace GradeVisionLib.Models
 {
-    public abstract class Question
+    public  class Question
     {
-        public  List<Answer> Answers {get; }
+        public List<Answer> Answers {get; }
 
-        private List<Answer> CorrectAnswers;
-
-        public Question(List<Answer> answers, List<Answer> correctAnswers, int points)
+        public Question(List<Answer> answers)
         {
             Answers = answers;
-            CorrectAnswers = correctAnswers;
         }
 
-        
-
-        //TODO: add answer comparison and scoring logic
+        public Question(int numOfAnswers)
+        {
+            Answers = new List<Answer>();
+            for (int i = 0; i < numOfAnswers; i++)
+            {
+                var label = (char)('A' + i);
+                var answer = new Answer(label.ToString());
+                Answers.Add(answer);
+            }
+        }
     }
 }

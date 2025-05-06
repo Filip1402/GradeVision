@@ -7,14 +7,16 @@ using System.Threading.Tasks;
 namespace GradeVisionLib.Interfaces
 {
     public abstract class ImageData
-    {
+    {   
+        public string Name { get; }
         public int Width { get; }
         public int Height { get; }
         public int Channels { get; }
         public byte[] Data { get; }
 
-        public ImageData(int width, int height, int channels, byte[] data)
+        public ImageData(string name, int width, int height, int channels, byte[] data)
         {
+            Name = name;
             Width = width;
             Height = height;
             Channels = channels;

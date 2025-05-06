@@ -28,5 +28,45 @@ namespace GradeVisionLib.Interfaces
         {
             IsMarked = true;
         }
+
+        public CircleRelation GetRelationTo(DetectedCircleBase other)
+        {
+            double dx = this.X - other.X;
+            double dy = this.Y - other.Y;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+            float r1 = this.Radius;
+            float r2 = other.Radius;
+
+            if (distance <= r1 - r2)
+            {
+                return CircleRelation.OtherInsideThis;
+            }
+            else if (distance <= r2 - r1)
+            {
+                return CircleRelation.ThisInsideOther;
+            }
+            else if (distance < r1 + r2)
+            {
+                return CircleRelation.Intersecting;
+            }
+            else if (distance == r1 + r2)
+            {
+                return CircleRelation.Touching;
+            }
+            else
+            {
+                return CircleRelation.Separate;
+            }
+        }
+    }
+
+    public enum CircleRelation
+    {
+        OtherInsideThis,
+        ThisInsideOther,
+        Intersecting,
+        Touching,
+        Separate
     }
 }
+
