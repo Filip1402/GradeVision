@@ -13,7 +13,7 @@ namespace GradeVisionLib.Impl
     {
         public ImageData ConvertToGrayscale(ImageData inputImage)
         {
-            var inputMat = (inputImage as EmguCvImage).ToMat();
+            var inputMat = getMat(inputImage);
             Mat grayMat = new Mat();
             CvInvoke.CvtColor(inputMat, grayMat, ColorConversion.Bgr2Gray);
             return EmguCvImage.FromMat(grayMat, inputImage.Name);

@@ -14,17 +14,17 @@ namespace GradeVisionLib.Impl
 {
     public partial class EmguCVImageProcessor : IImageProcessor
     {
-        private static readonly MCvScalar UNMARKED_CIRCLE_COLOR = new MCvScalar(0, 0, 255);
-        private static readonly MCvScalar MARKED_CIRCLE_COLOR = new MCvScalar(0, 255, 0);
+        private static readonly MCvScalar RED_EMGU_CV_COLOR = new MCvScalar(0, 0, 255);
+        private static readonly MCvScalar GREEN_EMGU_CV_COLOR = new MCvScalar(0, 255, 0);
+        private static readonly int MIN_CIRCLE_RADIUS = 10;
+        private static readonly int MAX_CIRCLE_RADIUS = 50;
+        private static readonly int MAX_VERTICAL_GROUP_DISTANCE = 15;
+        private static readonly double POSITION_DUPLICATE_DIFFERENCE_THRESHOLD = 8f;
+        private static readonly double RADIUS_DUPLICATE_DIFFERENCE_THRESHOLD = 5f;
 
-        private const int MIN_CIRCLE_RADIUS = 10;
-        private const int MAX_CIRCLE_RADIUS = 50;
-        private const int MAX_VERTICAL_GROUP_DISTANCE = 15;//px
-        private const double POSITION_DUPLICATE_DIFFERENCE_THRESHOLD = 8f;
-        private const double RADIUS_DUPLICATE_DIFFERENCE_THRESHOLD = 5f;
         public (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData input)
         {
-            var inputMat = (input as EmguCvImage).ToMat();
+            var inputMat = getMat(input);
             var outputMat = new EmguCvImage().ToMat();
             //for debug
             CvInvoke.CvtColor(inputMat, outputMat, ColorConversion.Gray2Bgr);
@@ -82,7 +82,7 @@ namespace GradeVisionLib.Impl
                     }
 
                     // Use marked color or group-specific color
-                    var color = isMarked ? MARKED_CIRCLE_COLOR : groupColor;
+                    var color = isMarked ? GREEN_EMGU_CV_COLOR : groupColor;
 
                     CvInvoke.Circle(outputMat,
                         new Point((int)circle.X, (int)circle.Y),

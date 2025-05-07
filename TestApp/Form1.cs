@@ -24,7 +24,9 @@ namespace TestApp
         private List<String> TestsToGradePaths { get; set; }
         private Dictionary<int, List<DetectedCircleBase>> ControlAnswers { get; set; }
 
-        private BindingList<Result> results = new BindingList<Result>();  // Using Result class to store data
+        private GradeScale GradeScale = new GradeScale(new List<string> { "1", "2", "3", "4", "5" }, new List<double> { 50.00, 63.00, 75.00, 85.00 });
+        private BindingList<GradeDefinition> GradeDefintions = new BindingList<GradeDefinition>();
+        private BindingList<GradingResult> results = new BindingList<GradingResult>();
 
         public Form1()
         {
@@ -34,6 +36,10 @@ namespace TestApp
         private void Form1_Load_1(object sender, EventArgs e)
         {
             dataGridView1.DataSource = results;
+            dataGridView2.DataSource = GradeDefintions;
+            dataGridView2.Columns[0].ReadOnly = true;
+            dataGridView2.Columns[1].ReadOnly = false;
+
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -66,7 +72,7 @@ namespace TestApp
             {
                 picControlTest.Image = await LoadImageWithoutLockAsync(ControlTestPath);
                 await Task.Yield();
-                ( var processedControlImage, ControlAnswers) = await Task.Run(() =>
+                (var processedControlImage, ControlAnswers) = await Task.Run(() =>
                     AnswerSheetAnalyzer.ProcessControlSheet(ControlTestPath));
                 picControlTest.Image = (processedControlImage as EmguCvImage)?.ToMat().ToImage<Bgr, byte>().ToBitmap();
             }
@@ -99,9 +105,13 @@ namespace TestApp
         private async void btnGradeTests_Click(object sender, EventArgs e)
         {
 
-            if(ControlAnswers.Count == 0 || TestsToGradePaths.Count == 0)
+            if (ControlAnswers.Count == 0 || TestsToGradePaths.Count == 0)
             {
-                MessageBox.Show("Greška!!!", "Kontrolni test i testovi za ocijenjivanje moraju biti učitani prije ocjenjivanja!!!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    "Error!!!",
+                    "Control test and tests for grading must be loaded before grading!!!",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
 
             foreach (var imagePath in TestsToGradePaths)
@@ -109,16 +119,58 @@ namespace TestApp
                 picTestToBeGraded.Image = await LoadImageWithoutLockAsync(imagePath);
 
                 var (processedImage, grade, score) = await Task.Run(() =>
-                    AnswerSheetAnalyzer.ProcessAnswerSheet(imagePath, ControlAnswers));
+                    AnswerSheetAnalyzer.ProcessAnswerSheet(imagePath, ControlAnswers, GradeScale));
 
                 picxGradedTests.Image = (processedImage as EmguCvImage).ToMat().ToImage<Bgr, byte>().ToBitmap();
 
                 System.Diagnostics.Debug.WriteLine($"Grade: {grade}, Score: {score}");
-                results.Add(new Result(Path.GetFileName(imagePath), grade, score));
+                results.Add(new GradingResult(Path.GetFileName(imagePath), grade, score));
                 await Task.Yield();
             }
+        }
 
-            ControlAnswers.Clear();
+        private void btnDefineGrade_Click(object sender, EventArgs e)
+        {
+            if (tboxGradeDefintion.Text == null || tboxGradeDefintion.Text.Trim().Length == 0)
+                return;
+
+            GradeDefintions.Add(new GradeDefinition(tboxGradeDefintion.Text, null));
+            dataGridView2.Rows[0].ReadOnly = true;
+            tboxGradeDefintion.Text = "";
+        }
+
+        private void btnApplyGradeScale_Click(object sender, EventArgs e)
+        {   
+            try
+            {
+                var (grades, thresholds) = TryExtractGradeScale(GradeDefintions);
+                GradeScale =  new GradeScale(grades, thresholds);
+                GradeDefintions.Clear();
+            }
+            catch (Exception ex)
+            {
+            }
+            
+        }
+
+        private (List<string>, List<double>) TryExtractGradeScale(
+        BindingList<GradeDefinition> gradeDefinitions)
+        {
+            if (gradeDefinitions == null || gradeDefinitions.Count < 2)
+            {
+                MessageBox.Show("You need at least two grade definitions.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw new ArgumentException("You need at least two grade definitions.");
+            }
+
+            var grades = gradeDefinitions.Select(g => g.Grade).ToList();
+            var missingThreshold = gradeDefinitions.Skip(1).Any(g => g.Treshold == null);
+            if (missingThreshold)
+            {
+                MessageBox.Show("All grade definitions except the first must have a threshold.", "Missing Threshold", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw new InvalidOperationException("All grade definitions except the first must have a threshold.");
+            }
+            var thresholds = gradeDefinitions.Skip(1).Select(g => g.Treshold.Value).ToList();
+            return (grades, thresholds);
         }
 
 
@@ -140,16 +192,27 @@ namespace TestApp
     }
 }
 
-public class Result
+public class GradingResult
 {
     public string Image { get; set; }
     public string Grade { get; set; }
     public double Score { get; set; }
 
-    public Result(string image, string grade, double score)
+    public GradingResult(string image, string grade, double score)
     {
         Grade = grade;
         Score = score;
         Image = image;
+    }
+}
+
+public class GradeDefinition
+{
+    public string Grade { get; set; }
+    public double? Treshold { get; set; }
+    public GradeDefinition(string grade, int? treshold)
+    {
+        Grade = grade;
+        Treshold = treshold;
     }
 }

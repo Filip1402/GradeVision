@@ -13,7 +13,8 @@ namespace GradeVisionLib.Interfaces
         ImageData ApplyThresholding(ImageData inputImage);
         (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData inputImage);
         ImageData CorrectPerspective(ImageData inputImage);
-        ImageData VisualizeAnswers(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers);
-        ImageData VisualizeGrade(ImageData inputImage, string grade, double score);
+        ImageData VisualizeDetectedCircles(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers);
+        ImageData VisualizeGrade(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers,
+            Dictionary<int, List<DetectedCircleBase>> controlAnswers, string grade, double score);
     }
 }

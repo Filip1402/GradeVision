@@ -14,7 +14,7 @@ namespace GradeVisionLib.Impl
 
         public ImageData Denoise(ImageData inputImage)
         {
-            var inputMat = (inputImage as EmguCvImage).ToMat();
+            var inputMat = getMat(inputImage);
             double noiseLevel = EstimateNoiseLevel(inputMat);
 
             if (noiseLevel >= NOISE_LEVEL_THRESHOLD)

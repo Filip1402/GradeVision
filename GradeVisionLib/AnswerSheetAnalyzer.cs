@@ -26,7 +26,7 @@ namespace GradeVisionLib
             return (proccedImage, controlAnswers);
         }
 
-        public (ImageData, string, double) ProcessAnswerSheet(string imagePath, Dictionary<int, List<DetectedCircleBase>> controlAnswers)
+        public (ImageData, string, double) ProcessAnswerSheet(string imagePath, Dictionary<int, List<DetectedCircleBase>> controlAnswers, GradeScale gradeScale)
         {
             
             this.currentImageName = Path.GetFileName(imagePath);
@@ -35,15 +35,15 @@ namespace GradeVisionLib
             (proccedImage, var studentAnswers) = CircleDetection(proccedImage);
 
             TestGrader grader = new TestGrader(
-                new GradeScale(new List<string> { "1", "2", "3", "4", "5" }, new List<double> { 50.00, 63.00, 75.00, 85.00 }),
+                gradeScale,
                 studentAnswers,
                 controlAnswers
             );
 
             var (grade, score) = grader.GetGrade();
 
-            (proccedImage) = AnswerVisualization(rawImage, studentAnswers);
-            (proccedImage) = GradeVisualization(proccedImage, grade, score);
+            AnswerVisualization(rawImage, studentAnswers);
+            (proccedImage) = GradeVisualization(rawImage, studentAnswers, controlAnswers, grade, score);
 
             return (proccedImage, grade, score);
         }
@@ -101,16 +101,19 @@ namespace GradeVisionLib
 
         private ImageData AnswerVisualization(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers)
         {
-            return ProcessStep(inputImage, questionAnswers, _imageProcessor.VisualizeAnswers);
+            return ProcessStep(inputImage, questionAnswers, _imageProcessor.VisualizeDetectedCircles);
         }
-        private ImageData GradeVisualization(ImageData inputImage, string grade, double score)
+        private ImageData GradeVisualization(ImageData inputImage,Dictionary<int, List<DetectedCircleBase>> questionAnswers,
+            Dictionary<int, List<DetectedCircleBase>> controlAnswers, String  grade, double score)
         {
-            return ProcessStep(inputImage, grade, score, _imageProcessor.VisualizeGrade);
+            return ProcessStep(inputImage, questionAnswers, controlAnswers, grade, score, _imageProcessor.VisualizeGrade);
         }
 
-        private ImageData ProcessStep(ImageData image, string grade, double score, Func<ImageData, string, double, ImageData> processingFunc)
+        private ImageData ProcessStep(ImageData image, Dictionary<int, List<DetectedCircleBase>> questionAnswers,
+            Dictionary<int, List<DetectedCircleBase>> controlAnswers, string grade, double score,
+            Func<ImageData, Dictionary<int, List<DetectedCircleBase>>, Dictionary<int, List<DetectedCircleBase>>, string, double, ImageData> processingFunc)
         {
-            ImageData result = processingFunc(image, grade, score);
+            ImageData result = processingFunc(image, questionAnswers, controlAnswers, grade, score);
             string functionName = processingFunc.Method.Name;
             System.Diagnostics.Debug.WriteLine($"Processing step: {functionName}");
             SaveStep(result, GetStepFileName(functionName));

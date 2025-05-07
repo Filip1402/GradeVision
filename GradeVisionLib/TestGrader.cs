@@ -15,6 +15,7 @@ namespace GradeVisionLib
         private readonly GradeScale GradeScale;
         private readonly Dictionary<int, List<DetectedCircleBase>> ControlTest;
         private readonly Dictionary<int, List<DetectedCircleBase>> StudentTest;
+        private readonly double INVALID_TEST_SCORE = -100;
 
         public TestGrader(GradeScale gradeScale, Dictionary<int, List<DetectedCircleBase>> controlTest, Dictionary<int, List<DetectedCircleBase>> studentTest)
         {
@@ -25,22 +26,15 @@ namespace GradeVisionLib
 
         public (string, double) GetGrade()
         {
-            var score = gradeTest();
+            var score = CalculateTestScore();
             return (GradeScale.GetGrade(score), score);
         }
 
-        private double gradeTest()
+        private double CalculateTestScore()
         {
-            if (ControlTest.Count == 0 || StudentTest.Count == 0)
+            if (TestsWithMismatchingStructure())
             {
-                return -100;
-                //throw new ArgumentNullException("ControlTest or StudentTest have 0 questions detected, check picture quality");
-            }
-            if (ControlTest.Count != StudentTest.Count)
-            {
-                return -100;
-                //throw new ArgumentException("There is a mismatch between number of questions between student and control test.");
-
+                return INVALID_TEST_SCORE;
             }
 
             var totalScore = 0.0;
@@ -56,8 +50,7 @@ namespace GradeVisionLib
 
                 if (numOfCorrectAnswersForQuestionStudent != numOfCorrectAnswersForQuestionControl)
                 {
-                    return -100;
-                    //throw new ArgumentException("There is a mismatch between marked answers between student and control test.");
+                    return INVALID_TEST_SCORE;
                 }
 
 
@@ -77,6 +70,11 @@ namespace GradeVisionLib
 
             return totalScore / ControlTest.Count * 100;
 
+        }
+
+        private bool TestsWithMismatchingStructure()
+        {
+            return ControlTest.Count == 0 || StudentTest.Count == 0 || ControlTest.Count != StudentTest.Count;
         }
     }
 }

@@ -15,7 +15,7 @@ namespace GradeVisionLib.Impl
 
         public ImageData CorrectPerspective(ImageData inputImage)
         {
-            var inputMat = (inputImage as EmguCvImage).ToMat();
+            var inputMat = getMat(inputImage);
             Mat cannyEdges = DetectEdgesCanny(inputMat);
             Mat adaptiveEdges = DetectEdgesAdaptive(inputMat);
 

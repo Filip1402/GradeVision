@@ -12,7 +12,7 @@ namespace GradeVisionLib.Impl
     {
         public ImageData CorrectRotation(ImageData inputImage)
         {
-            var inputMat = (inputImage as EmguCvImage).ToMat();
+            var inputMat = getMat(inputImage);
             var thresholded = ApplyThresholding(inputImage);
             RotatedRect nameRect = DetectNameRectangle((thresholded as EmguCvImage).ToMat(), inputMat);
 
