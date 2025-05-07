@@ -16,22 +16,22 @@ namespace GradeVisionLib
         private int stepCounter = 1;
         private string currentImageName;
 
-        public (ImageData, Dictionary<int, List<DetectedCircleBase>> ControlAnswers) ProcessControlSheet(string imagePath)
+        public (ImageData, Dictionary<int, List<DetectedCircleBase>> ControlAnswers) ProcessControlSheet(ImageData inputImage)
         {
             currentImageName = "control";
             string outputDir = PrepareOutputDirectory(currentImageName);
-            var (rawImage, proccedImage) = ProcessImage(imagePath, outputDir);
+            var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
             (proccedImage, var controlAnswers) = CircleDetection(proccedImage);
             (proccedImage) = AnswerVisualization(rawImage, controlAnswers);
+            ResetStepCounter();
             return (proccedImage, controlAnswers);
         }
 
-        public (ImageData, string, double) ProcessAnswerSheet(string imagePath, Dictionary<int, List<DetectedCircleBase>> controlAnswers, GradeScale gradeScale)
+        public (ImageData, string, double) ProcessAnswerSheet(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> controlAnswers, GradeScale gradeScale)
         {
-            
-            this.currentImageName = Path.GetFileName(imagePath);
+            currentImageName = inputImage.Name;
             string outputDir = PrepareOutputDirectory(currentImageName);
-            var (rawImage, proccedImage) = ProcessImage(imagePath, outputDir);
+            var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
             (proccedImage, var studentAnswers) = CircleDetection(proccedImage);
 
             TestGrader grader = new TestGrader(
@@ -44,13 +44,12 @@ namespace GradeVisionLib
 
             AnswerVisualization(rawImage, studentAnswers);
             (proccedImage) = GradeVisualization(rawImage, studentAnswers, controlAnswers, grade, score);
-
+            ResetStepCounter();
             return (proccedImage, grade, score);
         }
 
-        private (ImageData, ImageData) ProcessImage(string imagePath, string outputDir)
+        private (ImageData, ImageData) ProcessImage(ImageData rawImage, string outputDir)
         {
-            ImageData rawImage = _imageProcessor.LoadImage(imagePath);
             ImageData proccedImage = rawImage.Clone();
             SaveStep(proccedImage, outputDir + "/" + "00_Raw.png");
 
@@ -74,17 +73,6 @@ namespace GradeVisionLib
             }
 
             return (rawImage, proccedImage);
-        }
-
-
-        private string PrepareOutputDirectory(string imageName)
-        {
-            string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages", imageName);
-            if (!Directory.Exists(outputDir))
-            {
-                Directory.CreateDirectory(outputDir);
-            }
-            return outputDir;
         }
 
         private ImageData ConvertToGrayscale(ImageData image) => ProcessStep(image, _imageProcessor.ConvertToGrayscale);
@@ -148,9 +136,20 @@ namespace GradeVisionLib
             return result;
         }
 
+        #region Helper methods
+
         private void SaveStep(ImageData image, string fileName)
         {
             SaveImage(image, fileName);
+        }
+        private string PrepareOutputDirectory(string imageName)
+        {
+            string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages", imageName);
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+            return outputDir;
         }
 
         private string SaveImage(ImageData image, string fileName)
@@ -170,5 +169,11 @@ namespace GradeVisionLib
             var fileName = $"{stepCounter++.ToString("D2")}_{stepName}.png";
             return fileName;
         }
+        private void ResetStepCounter()
+        {
+            stepCounter = 1;
+        }
+
+        #endregion
     }
 }

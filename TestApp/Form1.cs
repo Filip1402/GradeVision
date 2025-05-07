@@ -17,12 +17,11 @@ namespace TestApp
 {
     public partial class Form1 : Form
     {
-        private static string controlImage = "bezRTubA.jpg";
-        private static string inputFolder = @"C:\Users\zutif\OneDrive - Fakultet Organizacije i Informatike Varaždin\FOI\Diplomski\";
+
         private AnswerSheetAnalyzer AnswerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor());
         private String ControlTestPath { get; set; }
         private List<String> TestsToGradePaths { get; set; }
-        private Dictionary<int, List<DetectedCircleBase>> ControlAnswers { get; set; }
+        private Dictionary<int, List<DetectedCircleBase>> ControlAnswers = new Dictionary<int, List<DetectedCircleBase>>();
 
         private GradeScale GradeScale = new GradeScale(new List<string> { "1", "2", "3", "4", "5" }, new List<double> { 50.00, 63.00, 75.00, 85.00 });
         private BindingList<GradeDefinition> GradeDefintions = new BindingList<GradeDefinition>();
@@ -39,7 +38,6 @@ namespace TestApp
             dataGridView2.DataSource = GradeDefintions;
             dataGridView2.Columns[0].ReadOnly = true;
             dataGridView2.Columns[1].ReadOnly = false;
-
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -70,10 +68,12 @@ namespace TestApp
 
             try
             {
-                picControlTest.Image = await LoadImageWithoutLockAsync(ControlTestPath);
+                var image = await LoadImageWithoutLockAsync(ControlTestPath);
+                picControlTest.Image = image;
                 await Task.Yield();
+                var imageData = EmguCvImage.FromImage(image, Path.GetFileName(ControlTestPath));
                 (var processedControlImage, ControlAnswers) = await Task.Run(() =>
-                    AnswerSheetAnalyzer.ProcessControlSheet(ControlTestPath));
+                    AnswerSheetAnalyzer.ProcessControlSheet(imageData));
                 picControlTest.Image = (processedControlImage as EmguCvImage)?.ToMat().ToImage<Bgr, byte>().ToBitmap();
             }
             catch (Exception ex)
@@ -93,13 +93,11 @@ namespace TestApp
             {
                 MessageBox.Show($"Failed to load image: {ex.Message}");
             }
-
         }
 
         private void btnLoadTestsToGrade_Click(object sender, EventArgs e)
         {
             openMultiFileDialog.ShowDialog();
-
         }
 
         private async void btnGradeTests_Click(object sender, EventArgs e)
@@ -108,18 +106,20 @@ namespace TestApp
             if (ControlAnswers.Count == 0 || TestsToGradePaths.Count == 0)
             {
                 MessageBox.Show(
-                    "Error!!!",
                     "Control test and tests for grading must be loaded before grading!!!",
+                    "Error!!!",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
+                return;
             }
 
             foreach (var imagePath in TestsToGradePaths)
             {
-                picTestToBeGraded.Image = await LoadImageWithoutLockAsync(imagePath);
-
+                var image = await LoadImageWithoutLockAsync(imagePath);
+                picTestToBeGraded.Image = image;
+                var imageData = EmguCvImage.FromImage(image, Path.GetFileName(imagePath));
                 var (processedImage, grade, score) = await Task.Run(() =>
-                    AnswerSheetAnalyzer.ProcessAnswerSheet(imagePath, ControlAnswers, GradeScale));
+                    AnswerSheetAnalyzer.ProcessAnswerSheet(imageData, ControlAnswers, GradeScale));
 
                 picxGradedTests.Image = (processedImage as EmguCvImage).ToMat().ToImage<Bgr, byte>().ToBitmap();
 
@@ -140,17 +140,14 @@ namespace TestApp
         }
 
         private void btnApplyGradeScale_Click(object sender, EventArgs e)
-        {   
+        {
             try
             {
                 var (grades, thresholds) = TryExtractGradeScale(GradeDefintions);
-                GradeScale =  new GradeScale(grades, thresholds);
+                GradeScale = new GradeScale(grades, thresholds);
                 GradeDefintions.Clear();
             }
-            catch (Exception ex)
-            {
-            }
-            
+            catch (Exception ex){}
         }
 
         private (List<string>, List<double>) TryExtractGradeScale(
@@ -172,7 +169,6 @@ namespace TestApp
             var thresholds = gradeDefinitions.Skip(1).Select(g => g.Treshold.Value).ToList();
             return (grades, thresholds);
         }
-
 
         #region Helper functions
         private async Task<Image> LoadImageWithoutLockAsync(string path)

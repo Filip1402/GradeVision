@@ -16,6 +16,9 @@ namespace GradeVisionLib.Impl
     {
         private static readonly MCvScalar RED_EMGU_CV_COLOR = new MCvScalar(0, 0, 255);
         private static readonly MCvScalar GREEN_EMGU_CV_COLOR = new MCvScalar(0, 255, 0);
+        private static readonly MCvScalar BLUE_EMGU_CV_COLOR = new MCvScalar(255, 0, 0);
+        private static readonly MCvScalar YELLOW_EMGU_CV_COLOR = new MCvScalar(0, 255, 255);
+
         private static readonly int MIN_CIRCLE_RADIUS = 10;
         private static readonly int MAX_CIRCLE_RADIUS = 50;
         private static readonly int MAX_VERTICAL_GROUP_DISTANCE = 15;
@@ -44,12 +47,7 @@ namespace GradeVisionLib.Impl
 
                 foreach (EmguCVCircle circle in group.Value)
                 {
-
-                    CvInvoke.Circle(outputMat,
-                        new Point((int)circle.X, (int)circle.Y),
-                        (int)circle.Radius,
-                        groupColor,
-                        1);
+                    DrawCircle(outputMat, circle, groupColor);
                 }
 
             }
@@ -64,9 +62,8 @@ namespace GradeVisionLib.Impl
 
             foreach (var group in filteredGroups)
             {
-                // Generate a unique random color for this group (unmarked circles)
                 var groupColor = new MCvScalar(
-                random.Next(50, 256), // Avoid very dark colors
+                random.Next(50, 256),
                     random.Next(50, 256),
                     random.Next(50, 256)
                 );
@@ -81,14 +78,9 @@ namespace GradeVisionLib.Impl
                         circle.SetToMarked();
                     }
 
-                    // Use marked color or group-specific color
                     var color = isMarked ? GREEN_EMGU_CV_COLOR : groupColor;
 
-                    CvInvoke.Circle(outputMat,
-                        new Point((int)circle.X, (int)circle.Y),
-                        (int)circle.Radius,
-                        color,
-                        1);
+                    DrawCircle(outputMat, circle, color);
                 }
 
                 FillPercentageHistogram.GenerateHistogramAndSaveImage(
@@ -241,12 +233,8 @@ namespace GradeVisionLib.Impl
                 .ToList();
 
             nestedCircles.ForEach(circle =>
-            {
-                CvInvoke.Circle(outputImage,
-                                new Point((int)circle.X, (int)circle.Y),
-                                (int)circle.Radius,
-                                new MCvScalar(255, 0, 0),
-                                1);
+            {   
+                DrawCircle(outputImage, circle, BLUE_EMGU_CV_COLOR);
             });
 
             return result;
@@ -280,12 +268,8 @@ namespace GradeVisionLib.Impl
             if (!isValid)
             {
                 foreach (var circle in circles)
-                {
-                    CvInvoke.Circle(outputImage,
-                    new Point((int)circle.X, (int)circle.Y),
-                    (int)circle.Radius,
-                    new MCvScalar(0, 255, 255),
-                    1);
+                {   
+                    DrawCircle(outputImage, circle, YELLOW_EMGU_CV_COLOR);
                 }
 
             }
@@ -297,12 +281,7 @@ namespace GradeVisionLib.Impl
             using (Mat mask = new Mat(thresholdedImage.Size, DepthType.Cv8U, 1))
             {
                 mask.SetTo(new MCvScalar(0));
-                CvInvoke.Circle(mask,
-                    new Point((int)circle.X, (int)circle.Y),
-                    (int)circle.Radius,
-                    new MCvScalar(255),
-                    -1);
-
+                DrawCircle(mask, circle, new MCvScalar(255), -1);
                 MCvScalar mean = CvInvoke.Mean(thresholdedImage, mask);
                 return (mean.V0 / 255.0) * 100;
             }
