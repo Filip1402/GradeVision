@@ -26,6 +26,8 @@ namespace TestApp
         private GradeScale GradeScale = new GradeScale(new List<string> { "1", "2", "3", "4", "5" }, new List<double> { 50.00, 63.00, 75.00, 85.00 });
         private BindingList<GradeDefinition> GradeDefintions = new BindingList<GradeDefinition>();
         private BindingList<GradingResult> results = new BindingList<GradingResult>();
+        private string outputFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/ProcessedImages/answerSheet.pdf";
+
 
         public Form1()
         {
@@ -42,8 +44,10 @@ namespace TestApp
 
         private void button2_Click(object sender, EventArgs e)
         {
-            var test = new Test((int)numericUpDown1.Value, (int)numericUpDown2.Value);
-            test.GetAnswerSheet();
+            var numOfQuestions = (int)numericUpDown1.Value;
+            var numOfAnswersPerQuestions = (int)numericUpDown2.Value;
+            new AnswerSheet(numOfQuestions, numOfAnswersPerQuestions, outputFolder).Generate();
+
         }
 
         private void dataGridView1_RowPrePaint(object sender, DataGridViewRowPrePaintEventArgs e)

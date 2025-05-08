@@ -66,10 +66,10 @@
             // btnGradeTests
             // 
             btnGradeTests.Font = new Font("Segoe UI", 15.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            btnGradeTests.Location = new Point(466, 634);
+            btnGradeTests.Location = new Point(455, 634);
             btnGradeTests.Margin = new Padding(4, 3, 4, 3);
             btnGradeTests.Name = "btnGradeTests";
-            btnGradeTests.Size = new Size(786, 82);
+            btnGradeTests.Size = new Size(795, 82);
             btnGradeTests.TabIndex = 1;
             btnGradeTests.Text = "Grade all tests";
             btnGradeTests.UseVisualStyleBackColor = true;
@@ -88,7 +88,7 @@
             // picxGradedTests
             // 
             picxGradedTests.BackColor = SystemColors.ControlDark;
-            picxGradedTests.Location = new Point(862, 225);
+            picxGradedTests.Location = new Point(860, 225);
             picxGradedTests.Name = "picxGradedTests";
             picxGradedTests.Size = new Size(390, 403);
             picxGradedTests.SizeMode = PictureBoxSizeMode.Zoom;
@@ -114,17 +114,17 @@
             dataGridView1.AllowUserToOrderColumns = true;
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridView1.Location = new Point(1259, 225);
+            dataGridView1.Location = new Point(1262, 46);
             dataGridView1.Name = "dataGridView1";
             dataGridView1.ReadOnly = true;
-            dataGridView1.Size = new Size(469, 403);
+            dataGridView1.Size = new Size(469, 582);
             dataGridView1.TabIndex = 5;
             dataGridView1.RowPrePaint += dataGridView1_RowPrePaint;
             // 
             // picTestToBeGraded
             // 
             picTestToBeGraded.BackColor = SystemColors.ControlDark;
-            picTestToBeGraded.Location = new Point(466, 225);
+            picTestToBeGraded.Location = new Point(455, 225);
             picTestToBeGraded.Name = "picTestToBeGraded";
             picTestToBeGraded.Size = new Size(390, 403);
             picTestToBeGraded.SizeMode = PictureBoxSizeMode.Zoom;
@@ -222,7 +222,7 @@
             // 
             label4.AutoSize = true;
             label4.Font = new Font("Segoe UI", 14.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            label4.Location = new Point(1259, 197);
+            label4.Location = new Point(1262, 18);
             label4.Name = "label4";
             label4.Size = new Size(144, 25);
             label4.TabIndex = 15;
@@ -257,7 +257,7 @@
             groupBox1.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             groupBox1.Location = new Point(50, 8);
             groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(1210, 186);
+            groupBox1.Size = new Size(1202, 186);
             groupBox1.TabIndex = 18;
             groupBox1.TabStop = false;
             groupBox1.Text = "Custom grading scale:";

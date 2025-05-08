@@ -1,132 +1,106 @@
 ﻿using System;
+using Lombok.NET;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 
 namespace GradeVisionLib.Models
 {
-    public class AnswerSheet
+    [RequiredArgsConstructor(MemberType = MemberType.Field, AccessTypes = AccessTypes.Private)]
+    public partial class AnswerSheet
     {
-        // Layout Constants
         private const double PagePadding = 40;
         private const double HeaderHeight = 60;
-        private const double AnswerAreaY = PagePadding * 1.2 + HeaderHeight;
-        private const double AnswerFrameBottomPadding = 40;
-        private const double FramePadding = 10;
-        private const double InnerMargin = 20; // Padding inside answer area for inner content
+        private const double InnerMargin = 20;
+        private const double HeaderTextPadding = 10;
+        private const double HeaderTextOffsetY = 35;
+        private const double QuestionNumberOffset = 70;
+        private const double MaxCircleRadius = 20;
+        private const double CircleFontScale = 1.3;
+        private const double QuestionSpacingDivider = 2.5;
 
-        public void GeneratePdfAnswerSheet(Test test, string outputPath)
+        private const string FontName = "Arial";
+        private const double HeaderFontSize = 18;
+
+        private readonly int _numOfQuestions;
+        private readonly int _numOfAnswersPerQuestion;
+        private readonly string _outputPath;
+
+        public void Generate()
         {
             var document = new PdfDocument();
             var page = document.AddPage();
             var gfx = XGraphics.FromPdfPage(page);
 
-            double pageWidth = page.Width;
-            double pageHeight = page.Height;
+            double answerAreaY = PagePadding + HeaderHeight + 10;
+            double answerAreaHeight = page.Height - answerAreaY - PagePadding;
+            double availableWidth = page.Width - 2 * PagePadding;
+            double availableHeight = answerAreaHeight - 2 * InnerMargin;
+            double questionSpacing = availableHeight / _numOfQuestions;
+            double circleRadius = Math.Min(questionSpacing / QuestionSpacingDivider, MaxCircleRadius);
+            double fontSize = circleRadius * CircleFontScale;
+            var font = new XFont(FontName, fontSize);
 
-            double answerAreaHeight = pageHeight - AnswerAreaY - AnswerFrameBottomPadding;
-            double answerAreaWidth = pageWidth - 2 * PagePadding;
+            DrawHeader(gfx, availableWidth);
+            DrawAnswerAreaFrame(gfx, answerAreaY, availableWidth, answerAreaHeight);
 
-            int numQuestions = test.Questions.Count;
-            int maxAnswers = GetMaxAnswerCount(test);
+            double contentStartY = answerAreaY + InnerMargin;
+            double rowWidth = availableWidth - 2 * InnerMargin;
+            double startX = PagePadding + InnerMargin;
 
-            // Space available for answers inside the main frame (minus padding)
-            double innerAvailableWidth = answerAreaWidth - 2 * InnerMargin - 80; // 80 for question number + spacing
-            double innerAvailableHeight = answerAreaHeight - InnerMargin;
+            DrawAllQuestionRows(gfx, contentStartY, questionSpacing, circleRadius, startX, rowWidth, font);
 
-            // Calculate circle size
-            double questionSpacing = innerAvailableHeight / numQuestions;
-            double maxCircleHeight = questionSpacing / 1.2;
-            double maxCircleWidth = innerAvailableWidth / maxAnswers;
-            double circleDiameter = Math.Min(maxCircleHeight, maxCircleWidth);
-            double circleRadius = Math.Max(10, Math.Min(circleDiameter / 2, 25));
-            double fontSize = circleRadius * 1.3;
-
-            // Fonts
-            var circleFont = new XFont("Arial", fontSize);
-            var frameFont = new XFont("Arial", 18);
-
-            // Draw header frame
-            DrawFrame(gfx, PagePadding, PagePadding, answerAreaWidth, HeaderHeight, "Name: ___________    Grade: ___________", frameFont);
-
-            // Draw outer answer area frame
-            DrawFrame(gfx, PagePadding, AnswerAreaY, answerAreaWidth, answerAreaHeight, "", frameFont);
-
-            // Start drawing questions
-            double innerStartX = PagePadding + InnerMargin;
-            double innerStartY = AnswerAreaY + InnerMargin * 1.2;
-            double currentY = innerStartY;
-            int questionNumber = 1;
-
-            double innerContentLeft = innerStartX;
-            double answerSpacing = innerAvailableWidth / maxAnswers;
-
-            // Track bottom of content to draw inner box
-            double innerContentBottomY = currentY;
-
-            foreach (var question in test.Questions)
-            {
-                DrawQuestionRow(gfx, question, questionNumber, currentY, circleRadius, innerContentLeft, answerSpacing, circleFont);
-                currentY += questionSpacing;
-                questionNumber++;
-            }
-
-            innerContentBottomY = currentY - (questionSpacing - circleRadius * 2);
-
-            // Draw inner frame around answer circles
-            double innerFrameX = innerContentLeft - circleRadius - 10;
-            double innerFrameY = innerStartY - circleRadius - 10;
-            double innerFrameWidth = (maxAnswers * answerSpacing) + 2 * circleRadius + 20;
-            double innerFrameHeight = innerContentBottomY - innerStartY + 2 * circleRadius + 20;
-
-
-            document.Save(outputPath);
+            document.Save(_outputPath);
         }
 
-        private void DrawQuestionRow(XGraphics gfx, Question question, int questionNumber, double y, double circleRadius, double startX, double answerSpacing, XFont font)
+        private void DrawHeader(XGraphics gfx, double width)
         {
-            string qLabel = $"{questionNumber}.";
-            var qSize = gfx.MeasureString(qLabel, font);
-            double qLabelX = startX;
-            gfx.DrawString(qLabel, font, XBrushes.Black, new XPoint(qLabelX, y + qSize.Height / 3));
+            gfx.DrawRectangle(XPens.Black, PagePadding, PagePadding, width, HeaderHeight);
+            gfx.DrawString(
+                "Name: ___________    Grade: ___________",
+                new XFont(FontName, HeaderFontSize),
+                XBrushes.Black,
+                new XPoint(PagePadding + HeaderTextPadding, PagePadding + HeaderTextOffsetY)
+            );
+        }
 
-            double answerX = startX + 60;
+        private void DrawAnswerAreaFrame(XGraphics gfx, double y, double width, double height)
+        {
+            gfx.DrawRectangle(XPens.Black, PagePadding, y, width, height);
+        }
 
-            foreach (var answer in question.Answers)
+        private void DrawAllQuestionRows(XGraphics gfx, double contentStartY, double questionSpacing, double radius, double startX, double rowWidth, XFont font)
+        {
+            for (int i = 0; i < _numOfQuestions; i++)
             {
-                DrawCircle(gfx, answerX, y, circleRadius);
-                CenterTextInCircle(gfx, answer.Label, font, answerX, y);
-                answerX += answerSpacing;
+                string label = $"{i + 1}.";
+                double centerY = contentStartY + i * questionSpacing + questionSpacing / 2;
+
+                var labelSize = gfx.MeasureString(label, font);
+                gfx.DrawString(label, font, XBrushes.Black, new XPoint(startX, centerY + labelSize.Height / 3));
+
+                double answerStartX = startX + QuestionNumberOffset;
+                double spacing = (rowWidth - QuestionNumberOffset) / _numOfAnswersPerQuestion;
+                double x = answerStartX;
+
+                for (int j = 0; j < _numOfAnswersPerQuestion; j++)
+                {
+                    char answerLabel = (char)('A' + j);
+                    DrawCircle(gfx, x, centerY, radius);
+                    CenterTextInCircle(gfx, answerLabel.ToString(), font, x, centerY);
+                    x += spacing;
+                }
             }
         }
 
-        private void DrawFrame(XGraphics gfx, double x, double y, double width, double height, string text, XFont font)
+        private void DrawCircle(XGraphics gfx, double cx, double cy, double r)
         {
-            gfx.DrawRectangle(XPens.Black, x, y, width, height);
-            gfx.DrawString(text, font, XBrushes.Black, new XPoint(x + FramePadding, y + 25));
+            gfx.DrawEllipse(XPens.Black, cx - r, cy - r, r * 2, r * 2);
         }
 
-        private void DrawCircle(XGraphics gfx, double centerX, double centerY, double radius)
-        {
-            gfx.DrawEllipse(XPens.Black, centerX - radius, centerY - radius, radius * 2, radius * 2);
-        }
-
-        private void CenterTextInCircle(XGraphics gfx, string text, XFont font, double centerX, double centerY)
+        private void CenterTextInCircle(XGraphics gfx, string text, XFont font, double cx, double cy)
         {
             var size = gfx.MeasureString(text, font);
-            double textX = centerX - size.Width / 2;
-            double textY = centerY - size.Height / 2 + size.Height * 0.75;
-            gfx.DrawString(text, font, XBrushes.Black, new XPoint(textX, textY));
-        }
-
-        private int GetMaxAnswerCount(Test test)
-        {
-            int max = 0;
-            foreach (var question in test.Questions)
-            {
-                if (question.Answers.Count > max)
-                    max = question.Answers.Count;
-            }
-            return max;
+            gfx.DrawString(text, font, XBrushes.Black, new XPoint(cx - size.Width / 2, cy + size.Height / 3));
         }
     }
 }

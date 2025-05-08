@@ -21,8 +21,9 @@ namespace GradeVisionLib
             currentImageName = "control";
             string outputDir = PrepareOutputDirectory(currentImageName);
             var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
-            (proccedImage, var controlAnswers) = CircleDetection(proccedImage);
-            (proccedImage) = AnswerVisualization(rawImage, controlAnswers);
+            (proccedImage, var controlAnswers) = ProcessStep(() => _imageProcessor.CircleDetection(proccedImage),"CircleDetection");
+            proccedImage = ProcessStep(() => _imageProcessor.VisualizeDetectedCircles(rawImage, controlAnswers), "VisualizeControlCircles");
+
             ResetStepCounter();
             return (proccedImage, controlAnswers);
         }
@@ -32,7 +33,7 @@ namespace GradeVisionLib
             currentImageName = inputImage.Name;
             string outputDir = PrepareOutputDirectory(currentImageName);
             var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
-            (proccedImage, var studentAnswers) = CircleDetection(proccedImage);
+            (proccedImage, var studentAnswers) = ProcessStep(() => _imageProcessor.CircleDetection(proccedImage), "CircleDetection");
 
             TestGrader grader = new TestGrader(
                 gradeScale,
@@ -42,8 +43,9 @@ namespace GradeVisionLib
 
             var (grade, score) = grader.GetGrade();
 
-            AnswerVisualization(rawImage, studentAnswers);
-            (proccedImage) = GradeVisualization(rawImage, studentAnswers, controlAnswers, grade, score);
+            ProcessStep(() => _imageProcessor.VisualizeDetectedCircles(rawImage, studentAnswers), "VisualizeStudentCircles");
+            proccedImage = ProcessStep(() => _imageProcessor.VisualizeGrade(rawImage, studentAnswers, controlAnswers, grade, score), "VisualizeGrade");
+
             ResetStepCounter();
             return (proccedImage, grade, score);
         }
@@ -53,95 +55,56 @@ namespace GradeVisionLib
             ImageData proccedImage = rawImage.Clone();
             SaveStep(proccedImage, outputDir + "/" + "00_Raw.png");
 
-            var preprocessingSteps = new List<Func<ImageData, ImageData>>
-                {
-                    ConvertToGrayscale,
-                    CorrectPerspective,
-                    CorrectRotation,
-                    Denoise,
-                    ApplyThresholding
-                };
-
-            foreach (var step in preprocessingSteps)
+            var preprocessingSteps = new List<(string Name, Func<ImageData, ImageData> Step)>
             {
-                proccedImage = step(proccedImage);
+                ("ConvertToGrayscale", image => _imageProcessor.ConvertToGrayscale(image)),
+                ("CorrectPerspective", image => _imageProcessor.CorrectPerspective(image)),
+                ("CorrectRotation", image => _imageProcessor.CorrectRotation(image)),
+                ("Denoise", image => _imageProcessor.Denoise(image)),
+                ("ApplyThresholding", image => _imageProcessor.ApplyThresholding(image))
+            };
 
-                if (step == CorrectRotation)
+            foreach (var (name, stepFunc) in preprocessingSteps)
+            {
+                proccedImage = ProcessStep(() => stepFunc(proccedImage), name);
+
+                if (name == "CorrectRotation")
                 {
                     rawImage = proccedImage.Clone();
                 }
             }
 
             return (rawImage, proccedImage);
+
         }
-
-        private ImageData ConvertToGrayscale(ImageData image) => ProcessStep(image, _imageProcessor.ConvertToGrayscale);
-
-        private ImageData CorrectRotation(ImageData image) => ProcessStep(image, _imageProcessor.CorrectRotation);
-
-        private ImageData Denoise(ImageData image) => ProcessStep(image, _imageProcessor.Denoise);
-
-        private ImageData CorrectPerspective(ImageData image) => ProcessStep(image, _imageProcessor.CorrectPerspective);
-
-        private ImageData ApplyThresholding(ImageData image) => ProcessStep(image, _imageProcessor.ApplyThresholding);
-
-        private (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData image) => ProcessStep(image, _imageProcessor.CircleDetection);
-
-        private ImageData AnswerVisualization(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers)
+        private T ProcessStep<T>(Func<T> processingFunc, string? stepName = null)
         {
-            return ProcessStep(inputImage, questionAnswers, _imageProcessor.VisualizeDetectedCircles);
-        }
-        private ImageData GradeVisualization(ImageData inputImage,Dictionary<int, List<DetectedCircleBase>> questionAnswers,
-            Dictionary<int, List<DetectedCircleBase>> controlAnswers, String  grade, double score)
-        {
-            return ProcessStep(inputImage, questionAnswers, controlAnswers, grade, score, _imageProcessor.VisualizeGrade);
-        }
+            if (processingFunc == null) throw new ArgumentNullException(nameof(processingFunc));
 
-        private ImageData ProcessStep(ImageData image, Dictionary<int, List<DetectedCircleBase>> questionAnswers,
-            Dictionary<int, List<DetectedCircleBase>> controlAnswers, string grade, double score,
-            Func<ImageData, Dictionary<int, List<DetectedCircleBase>>, Dictionary<int, List<DetectedCircleBase>>, string, double, ImageData> processingFunc)
-        {
-            ImageData result = processingFunc(image, questionAnswers, controlAnswers, grade, score);
-            string functionName = processingFunc.Method.Name;
-            System.Diagnostics.Debug.WriteLine($"Processing step: {functionName}");
-            SaveStep(result, GetStepFileName(functionName));
+            var result = processingFunc();
+            var methodName = stepName ?? processingFunc.Method.Name;
+
+            switch (result)
+            {
+                case ImageData image:
+                    SaveStep(image, GetStepFileName(methodName));
+                    break;
+                case ValueTuple<ImageData, Dictionary<int, List<DetectedCircleBase>>> tuple:
+                    SaveStep(tuple.Item1, GetStepFileName(methodName));
+                    break;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"Processing step: {methodName}");
             return result;
         }
 
-        private ImageData ProcessStep(ImageData image, Func<ImageData, ImageData> processingFunc)
-        {
-            ImageData result = processingFunc(image);
-            string functionName = processingFunc.Method.Name;
-            System.Diagnostics.Debug.WriteLine($"Processing step: {functionName}");
-            SaveStep(result, GetStepFileName(functionName));
-            return result;
-        }
-
-        private (ImageData, Dictionary<int, List<DetectedCircleBase>>) ProcessStep(ImageData image, Func<ImageData, (ImageData, Dictionary<int, List<DetectedCircleBase>>)> processingFunc)
-        {
-            (ImageData, Dictionary<int, List<DetectedCircleBase>>) results = processingFunc(image);
-            string functionName = processingFunc.Method.Name;
-            System.Diagnostics.Debug.WriteLine($"Processing step: {functionName}");
-            SaveStep(results.Item1, GetStepFileName(functionName));
-            return results;
-        }
-
-        private ImageData ProcessStep(ImageData image, Dictionary<int, List<DetectedCircleBase>> questionAnswers, Func<ImageData, Dictionary<int, List<DetectedCircleBase>>, ImageData> processingFunc)
-        {
-            ImageData result = processingFunc(image, questionAnswers);
-            string functionName = processingFunc.Method.Name;
-            System.Diagnostics.Debug.WriteLine($"Processing step: {functionName}");
-            SaveStep(result, GetStepFileName(functionName));
-
-            return result;
-        }
 
         #region Helper methods
-
         private void SaveStep(ImageData image, string fileName)
         {
             SaveImage(image, fileName);
         }
+
         private string PrepareOutputDirectory(string imageName)
         {
             string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages", imageName);
@@ -169,6 +132,7 @@ namespace GradeVisionLib
             var fileName = $"{stepCounter++.ToString("D2")}_{stepName}.png";
             return fileName;
         }
+
         private void ResetStepCounter()
         {
             stepCounter = 1;

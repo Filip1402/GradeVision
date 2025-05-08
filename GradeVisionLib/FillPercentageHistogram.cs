@@ -14,35 +14,23 @@ public class FillPercentageHistogram
         var model = new PlotModel
         {
             Title = "Fill Percentage Histogram",
-            Background = OxyColors.White
+            Background = OxyColors.White,
+            Axes =
+            {
+                new LinearAxis { Position = AxisPosition.Bottom, Title = "Fill % Bin", Minimum = 0, Maximum = 100 },
+                new LinearAxis { Position = AxisPosition.Left, Title = "Count" }
+            }
         };
 
-        // Axes
-        model.Axes.Add(new LinearAxis
-        {
-            Position = AxisPosition.Bottom,
-            Title = "Fill % Bin",
-            Minimum = 0,
-            Maximum = 100
-        });
-
-        model.Axes.Add(new LinearAxis
-        {
-            Position = AxisPosition.Left,
-            Title = "Count"
-        });
-
-        // Histogram data
-        int[] histogramData = new int[101];
+        int[] bins = new int[101];
         foreach (var fill in fillPercentages)
         {
             int bin = (int)Math.Floor(fill);
-            if (bin >= 0 && bin <= 100)
-                histogramData[bin]++;
+            if (bin is >= 0 and <= 100)
+                bins[bin]++;
         }
 
-        // Use RectangleBarSeries to simulate a histogram
-        var barSeries = new RectangleBarSeries
+        var bars = new RectangleBarSeries
         {
             FillColor = OxyColors.SkyBlue,
             StrokeColor = OxyColors.Black,
@@ -50,45 +38,32 @@ public class FillPercentageHistogram
         };
 
         for (int i = 0; i <= 100; i++)
-        {
-            double x0 = i;
-            double x1 = i + 1;
-            double y0 = 0;
-            double y1 = histogramData[i];
-            barSeries.Items.Add(new RectangleBarItem(x0, y0, x1, y1));
-        }
+            bars.Items.Add(new RectangleBarItem(i, 0, i + 1, bins[i]));
 
-        model.Series.Add(barSeries);
-
-        // Add vertical threshold line
-        var line = new LineSeries
+        var thresholdLine = new LineSeries
         {
             Color = OxyColors.Red,
             StrokeThickness = 2,
             LineStyle = LineStyle.Solid,
-            Title = $"Threshold = {threshold:F2}"
+            Title = $"Threshold = {threshold:F2}",
+            Points =
+            {
+                new DataPoint(threshold, 0),
+                new DataPoint(threshold, bins.Max())
+            }
         };
 
-        line.Points.Add(new DataPoint(threshold, 0));
-        line.Points.Add(new DataPoint(threshold, histogramData.Max()));
-        model.Series.Add(line);
+        model.Series.Add(bars);
+        model.Series.Add(thresholdLine);
 
-        // Export the image using PngExporter
-        var exporter = new PngExporter(600, 400, 96);
-        string outputPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages");
-        outputPath = Path.Combine(outputPath, outputFileName);
-        outputPath = Path.Combine(outputPath, "histogram.png");
-        string directory = Path.GetDirectoryName(outputPath);
-        if (!Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        string path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            "ProcessedImages", outputFileName, "histogram.png");
 
-        using (var stream = File.Create(outputPath))
-        {
-            exporter.Export(model, stream);
-        }
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        using var stream = File.Create(path);
+        new PngExporter(600, 400, 96).Export(model, stream);
 
-        Console.WriteLine($"Histogram saved to: {outputPath}");
+        Console.WriteLine($"Histogram saved to: {path}");
     }
 }

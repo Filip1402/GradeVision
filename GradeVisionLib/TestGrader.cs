@@ -10,26 +10,19 @@ using System.Threading.Tasks;
 
 namespace GradeVisionLib
 {
+    [RequiredArgsConstructor(MemberType = MemberType.Field, AccessTypes = AccessTypes.Private)]
     public partial class TestGrader
     {
         private readonly GradeScale GradeScale;
         private readonly Dictionary<int, List<DetectedCircleBase>> ControlTest;
         private readonly Dictionary<int, List<DetectedCircleBase>> StudentTest;
-        private readonly double INVALID_TEST_SCORE = -100;
-
-        public TestGrader(GradeScale gradeScale, Dictionary<int, List<DetectedCircleBase>> controlTest, Dictionary<int, List<DetectedCircleBase>> studentTest)
-        {
-            GradeScale = gradeScale;
-            ControlTest = controlTest;
-            StudentTest = studentTest;
-        }
+        private const double INVALID_TEST_SCORE = -100;
 
         public (string, double) GetGrade()
         {
             var score = CalculateTestScore();
             return (GradeScale.GetGrade(score), score);
         }
-
         private double CalculateTestScore()
         {
             if (TestsWithMismatchingStructure())
@@ -53,7 +46,6 @@ namespace GradeVisionLib
                     return INVALID_TEST_SCORE;
                 }
 
-
                 var numOfCorrectStudentAnswers = 0;
                 for (var j = 0; j < controlTestQuestion.Count; j++)
                 {
@@ -67,11 +59,9 @@ namespace GradeVisionLib
                 totalScore += (double)numOfCorrectStudentAnswers / numOfCorrectAnswersForQuestionControl;
 
             }
-
             return totalScore / ControlTest.Count * 100;
 
         }
-
         private bool TestsWithMismatchingStructure()
         {
             return ControlTest.Count == 0 || StudentTest.Count == 0 || ControlTest.Count != StudentTest.Count;

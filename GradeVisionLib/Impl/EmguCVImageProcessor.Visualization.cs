@@ -67,7 +67,7 @@ namespace GradeVisionLib.Impl
                     })
                     .Where(x => x.Circle.IsMarked)
                     .ToList()
-                    .ForEach(x => DrawCircle(outputMat, x.Circle, x.Color));
+                    .ForEach(x => DrawCircle(outputMat, x.Circle, x.Color, 2));
             }
         }
 
