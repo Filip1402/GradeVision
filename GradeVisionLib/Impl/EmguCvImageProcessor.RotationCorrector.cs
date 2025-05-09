@@ -8,13 +8,13 @@ using System.Drawing;
 
 namespace GradeVisionLib.Impl
 {
-    public partial class EmguCVImageProcessor : IImageProcessor
+    public partial class EmguCVImageProcessor : ImageProcessorBase
     {
-        public ImageData CorrectRotation(ImageData inputImage)
+        override public ImageData CorrectRotation(ImageData inputImage)
         {
             var inputMat = getMat(inputImage);
             var thresholded = ApplyThresholding(inputImage);
-            RotatedRect nameRect = DetectNameRectangle((thresholded as EmguCvImage).ToMat(), inputMat);
+            RotatedRect nameRect = DetectNameRectangle(thresholded, inputMat);
 
             bool isUpsideDown = nameRect.Center.Y > inputMat.Height / 2;
 
@@ -38,10 +38,11 @@ namespace GradeVisionLib.Impl
             return rotatedImage;
         }
 
-        private RotatedRect DetectNameRectangle(Mat thresholded, Mat visualization)
+        private RotatedRect DetectNameRectangle(ImageData thresholdedImageData, Mat visualization)
         {
-            VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint();
-            Mat hierarchy = new Mat();
+            var thresholded = (thresholdedImageData as EmguCvImage).ToMat();
+            var contours = new VectorOfVectorOfPoint();
+            var hierarchy = new Mat();
             CvInvoke.FindContours(thresholded, contours, hierarchy, RetrType.List, ChainApproxMethod.ChainApproxSimple);
 
             RotatedRect bestRect = new RotatedRect();
@@ -72,6 +73,14 @@ namespace GradeVisionLib.Impl
                     }
                 }
             }
+            VisualizeDetectedRectanglesForPerspectiveCorrectionIfNeeded(thresholdedImageData, visualization, bestRect);
+            return bestRect;
+        }
+
+        private void VisualizeDetectedRectanglesForPerspectiveCorrectionIfNeeded(ImageData thresholdedImageData, Mat visualization, RotatedRect bestRect)
+        {
+            if (!isDebugModeEnabled)
+                return;
 
             if (bestRect.Size.Width > 0 && bestRect.Size.Height > 0)
             {
@@ -80,10 +89,8 @@ namespace GradeVisionLib.Impl
                 {
                     CvInvoke.Line(visualization, Point.Round(rectPoints[i]), Point.Round(rectPoints[(i + 1) % 4]), new MCvScalar(255, 255, 0), 2);
                 }
-                SaveImage(visualization, "DetectedRectangles.png");
+                SaveImage(visualization, thresholdedImageData.Name, "DetectedRectanglesForPerspectiveCorrection.png");
             }
-
-            return bestRect;
         }
     }
 }

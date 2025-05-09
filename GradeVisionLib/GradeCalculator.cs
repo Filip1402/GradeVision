@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace GradeVisionLib
 {
     [RequiredArgsConstructor(MemberType = MemberType.Field, AccessTypes = AccessTypes.Private)]
-    public partial class TestGrader
+    public partial class GradeCalculator
     {
         private readonly GradeScale GradeScale;
         private readonly Dictionary<int, List<DetectedCircleBase>> ControlTest;

@@ -7,9 +7,29 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-public class FillPercentageHistogram
+public class HistogramGenerator
 {
     public static void GenerateHistogramAndSaveImage(List<double> fillPercentages, double threshold, string outputFileName)
+    {
+        var bins = ComputeBins(fillPercentages);
+        var model = CreatePlotModel(bins, threshold);
+        var filePath = GetOutputFilePath(outputFileName);
+        SavePlotModelAsPng(model, filePath);
+    }
+
+    private static int[] ComputeBins(List<double> fillPercentages)
+    {
+        int[] bins = new int[101];
+        foreach (var fill in fillPercentages)
+        {
+            int bin = (int)Math.Floor(fill);
+            if (bin is >= 0 and <= 100)
+                bins[bin]++;
+        }
+        return bins;
+    }
+
+    private static PlotModel CreatePlotModel(int[] bins, double threshold)
     {
         var model = new PlotModel
         {
@@ -21,14 +41,6 @@ public class FillPercentageHistogram
                 new LinearAxis { Position = AxisPosition.Left, Title = "Count" }
             }
         };
-
-        int[] bins = new int[101];
-        foreach (var fill in fillPercentages)
-        {
-            int bin = (int)Math.Floor(fill);
-            if (bin is >= 0 and <= 100)
-                bins[bin]++;
-        }
 
         var bars = new RectangleBarSeries
         {
@@ -55,15 +67,22 @@ public class FillPercentageHistogram
 
         model.Series.Add(bars);
         model.Series.Add(thresholdLine);
+        return model;
+    }
 
-        string path = Path.Combine(
+    private static string GetOutputFilePath(string outputFileName)
+    {
+        string folderPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            "ProcessedImages", outputFileName, "histogram.png");
+            "ProcessedImages", outputFileName);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        using var stream = File.Create(path);
+        Directory.CreateDirectory(folderPath);
+        return Path.Combine(folderPath, "histogram.png");
+    }
+
+    private static void SavePlotModelAsPng(PlotModel model, string filePath)
+    {
+        using var stream = File.Create(filePath);
         new PngExporter(600, 400, 96).Export(model, stream);
-
-        Console.WriteLine($"Histogram saved to: {path}");
     }
 }

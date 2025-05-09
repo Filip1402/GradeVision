@@ -8,14 +8,13 @@ using System.IO;
 
 namespace GradeVisionLib.Impl
 {
-    public partial class EmguCVImageProcessor : IImageProcessor
+    public partial class EmguCVImageProcessor : ImageProcessorBase
     {   
         private static readonly FontFace FONT = FontFace.HersheySimplex;
         private static readonly double FONT_SCALE = 1f;
         private static readonly int FONT_THICKNESS = 2;
 
-
-        public ImageData VisualizeDetectedCircles(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers)
+        override public ImageData VisualizeDetectedCircles(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers)
         {
 
             var inputMat = getMat(inputImage);
@@ -33,7 +32,7 @@ namespace GradeVisionLib.Impl
             return EmguCvImage.FromMat(outputMat, inputImage.Name);
         }
 
-        public ImageData VisualizeGrade(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers, 
+        override public ImageData VisualizeGrade(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> questionAnswers, 
             Dictionary<int, List<DetectedCircleBase>> controlAnswers,  string grade, double score)
         {
             var inputMat = getMat(inputImage);

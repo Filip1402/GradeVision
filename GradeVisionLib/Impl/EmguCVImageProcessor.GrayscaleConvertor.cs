@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace GradeVisionLib.Impl
 {
-    public partial class EmguCVImageProcessor : IImageProcessor
+    public partial class EmguCVImageProcessor : ImageProcessorBase
     {
-        public ImageData ConvertToGrayscale(ImageData inputImage)
+        override public ImageData ConvertToGrayscale(ImageData inputImage)
         {
             var inputMat = getMat(inputImage);
             Mat grayMat = new Mat();

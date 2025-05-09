@@ -3,10 +3,10 @@ using Lombok.NET;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 
-namespace GradeVisionLib.Models
+namespace GradeVisionLib
 {
     [RequiredArgsConstructor(MemberType = MemberType.Field, AccessTypes = AccessTypes.Private)]
-    public partial class AnswerSheet
+    public partial class AnswerSheetGenerator
     {
         private const double PagePadding = 40;
         private const double HeaderHeight = 60;
@@ -49,7 +49,7 @@ namespace GradeVisionLib.Models
 
             DrawAllQuestionRows(gfx, contentStartY, questionSpacing, circleRadius, startX, rowWidth, font);
 
-            document.Save(_outputPath);
+            document.Save(Path.Combine(_outputPath, "answerSheet.pdf"));
         }
 
         private void DrawHeader(XGraphics gfx, double width)

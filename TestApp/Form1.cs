@@ -17,8 +17,8 @@ namespace TestApp
 {
     public partial class Form1 : Form
     {
-
-        private AnswerSheetAnalyzer AnswerSheetAnalyzer = new AnswerSheetAnalyzer(new EmguCVImageProcessor());
+        private static string outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages");
+        private AnswerSheetGrader AnswerSheetAnalyzer = new AnswerSheetGrader(new EmguCVImageProcessor(true), outputFolder);
         private String ControlTestPath { get; set; }
         private List<String> TestsToGradePaths { get; set; }
         private Dictionary<int, List<DetectedCircleBase>> ControlAnswers = new Dictionary<int, List<DetectedCircleBase>>();
@@ -26,8 +26,6 @@ namespace TestApp
         private GradeScale GradeScale = new GradeScale(new List<string> { "1", "2", "3", "4", "5" }, new List<double> { 50.00, 63.00, 75.00, 85.00 });
         private BindingList<GradeDefinition> GradeDefintions = new BindingList<GradeDefinition>();
         private BindingList<GradingResult> results = new BindingList<GradingResult>();
-        private string outputFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/ProcessedImages/answerSheet.pdf";
-
 
         public Form1()
         {
@@ -46,7 +44,7 @@ namespace TestApp
         {
             var numOfQuestions = (int)numericUpDown1.Value;
             var numOfAnswersPerQuestions = (int)numericUpDown2.Value;
-            new AnswerSheet(numOfQuestions, numOfAnswersPerQuestions, outputFolder).Generate();
+            new AnswerSheetGenerator(numOfQuestions, numOfAnswersPerQuestions, outputFolder).Generate();
 
         }
 
@@ -70,6 +68,11 @@ namespace TestApp
         {
             ControlTestPath = openFileDialog1.FileName;
 
+            await ProcessControlTestImage();
+        }
+
+        private async Task ProcessControlTestImage()
+        {
             try
             {
                 var image = await LoadImageWithoutLockAsync(ControlTestPath);
@@ -151,7 +154,7 @@ namespace TestApp
                 GradeScale = new GradeScale(grades, thresholds);
                 GradeDefintions.Clear();
             }
-            catch (Exception ex){}
+            catch (Exception ex) { }
         }
 
         private (List<string>, List<double>) TryExtractGradeScale(
@@ -189,6 +192,13 @@ namespace TestApp
             }
         }
         #endregion
+
+        private async void chbocDebugEnabled_CheckedChanged(object sender, EventArgs e)
+        {
+            AnswerSheetAnalyzer = new AnswerSheetGrader(new EmguCVImageProcessor(chbocDebugEnabled.Checked), outputFolder);
+            if(ControlTestPath != null)
+                await ProcessControlTestImage();
+        }
     }
 }
 

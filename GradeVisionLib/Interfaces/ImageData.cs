@@ -8,7 +8,7 @@ namespace GradeVisionLib.Interfaces
 {
     public abstract class ImageData
     {   
-        public string Name { get; }
+        public string Name { get; set; }
         public int Width { get; }
         public int Height { get; }
         public int Channels { get; }

@@ -5,23 +5,26 @@ using GradeVisionLib.Interfaces;
 using GradeVisionLib.Models;
 using Lombok.NET;
 using System.ComponentModel.DataAnnotations;
+using System.Reflection.Metadata.Ecma335;
 
 namespace GradeVisionLib
 {
     [RequiredArgsConstructor(MemberType = MemberType.Field, AccessTypes = AccessTypes.Private)]
-    public partial class AnswerSheetAnalyzer
+    public partial class AnswerSheetGrader
     {
-        private readonly IImageProcessor _imageProcessor;
-
-        private int stepCounter = 1;
+        private readonly ImageProcessorBase _imageProcessor;
+        private readonly string outputPath;
+        private int stepCounter = 0;
         private string currentImageName;
+        private const string CONTROL_FILE_NAME = "control.png";
 
         public (ImageData, Dictionary<int, List<DetectedCircleBase>> ControlAnswers) ProcessControlSheet(ImageData inputImage)
         {
-            currentImageName = "control";
+            currentImageName = CONTROL_FILE_NAME;
+            inputImage.Name = CONTROL_FILE_NAME;
             string outputDir = PrepareOutputDirectory(currentImageName);
             var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
-            (proccedImage, var controlAnswers) = ProcessStep(() => _imageProcessor.CircleDetection(proccedImage),"CircleDetection");
+            (proccedImage, var controlAnswers) = ProcessStep(() => _imageProcessor.CircleDetection(proccedImage), "CircleDetection");
             proccedImage = ProcessStep(() => _imageProcessor.VisualizeDetectedCircles(rawImage, controlAnswers), "VisualizeControlCircles");
 
             ResetStepCounter();
@@ -35,7 +38,7 @@ namespace GradeVisionLib
             var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
             (proccedImage, var studentAnswers) = ProcessStep(() => _imageProcessor.CircleDetection(proccedImage), "CircleDetection");
 
-            TestGrader grader = new TestGrader(
+            GradeCalculator grader = new GradeCalculator(
                 gradeScale,
                 studentAnswers,
                 controlAnswers
@@ -53,10 +56,10 @@ namespace GradeVisionLib
         private (ImageData, ImageData) ProcessImage(ImageData rawImage, string outputDir)
         {
             ImageData proccedImage = rawImage.Clone();
-            SaveStep(proccedImage, outputDir + "/" + "00_Raw.png");
 
             var preprocessingSteps = new List<(string Name, Func<ImageData, ImageData> Step)>
             {
+                ("Raw", image => image),
                 ("ConvertToGrayscale", image => _imageProcessor.ConvertToGrayscale(image)),
                 ("CorrectPerspective", image => _imageProcessor.CorrectPerspective(image)),
                 ("CorrectRotation", image => _imageProcessor.CorrectRotation(image)),
@@ -79,27 +82,34 @@ namespace GradeVisionLib
         }
         private T ProcessStep<T>(Func<T> processingFunc, string? stepName = null)
         {
-            if (processingFunc == null) throw new ArgumentNullException(nameof(processingFunc));
-
             var result = processingFunc();
             var methodName = stepName ?? processingFunc.Method.Name;
-
-            switch (result)
-            {
-                case ImageData image:
-                    SaveStep(image, GetStepFileName(methodName));
-                    break;
-                case ValueTuple<ImageData, Dictionary<int, List<DetectedCircleBase>>> tuple:
-                    SaveStep(tuple.Item1, GetStepFileName(methodName));
-                    break;
-            }
-
-            System.Diagnostics.Debug.WriteLine($"Processing step: {methodName}");
+            DebugProcessStepIfNeeded(result, methodName);
             return result;
         }
 
-
         #region Helper methods
+        private void DebugProcessStepIfNeeded<T>(T? result, string methodName)
+        {
+            if (_imageProcessor.isDebugModeEnabled)
+            {
+                switch (result)
+                {
+                    case ImageData image:
+
+                        SaveStep(image, GetStepFileName(methodName));
+
+                        break;
+                    case ValueTuple<ImageData, Dictionary<int, List<DetectedCircleBase>>> tuple:
+
+                        SaveStep(tuple.Item1, GetStepFileName(methodName));
+
+                        break;
+                }
+                System.Diagnostics.Debug.WriteLine($"Processing step: {methodName}");
+            }
+        }
+
         private void SaveStep(ImageData image, string fileName)
         {
             SaveImage(image, fileName);
@@ -107,8 +117,8 @@ namespace GradeVisionLib
 
         private string PrepareOutputDirectory(string imageName)
         {
-            string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ProcessedImages", imageName);
-            if (!Directory.Exists(outputDir))
+            string outputDir = Path.Combine(outputPath, imageName);
+            if (_imageProcessor.isDebugModeEnabled &&  !Directory.Exists(outputDir))
             {
                 Directory.CreateDirectory(outputDir);
             }
@@ -135,7 +145,7 @@ namespace GradeVisionLib
 
         private void ResetStepCounter()
         {
-            stepCounter = 1;
+            stepCounter = 0;
         }
 
         #endregion

@@ -4,9 +4,9 @@ using GradeVisionLib.Interfaces;
 
 namespace GradeVisionLib.Impl
 {
-    public partial class EmguCVImageProcessor : IImageProcessor
+    public partial class EmguCVImageProcessor : ImageProcessorBase
     {
-        public ImageData ApplyThresholding(ImageData inputImage)
+        override public ImageData ApplyThresholding(ImageData inputImage)
         {
             var inputMat = getMat(inputImage);
             Mat threshMat = new Mat();

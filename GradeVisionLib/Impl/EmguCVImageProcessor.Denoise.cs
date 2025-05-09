@@ -6,12 +6,12 @@ using System.Drawing;
 
 namespace GradeVisionLib.Impl
 {
-    public partial class EmguCVImageProcessor : IImageProcessor
+    public partial class EmguCVImageProcessor : ImageProcessorBase
     {
         private const double NOISE_LEVEL_THRESHOLD = 1.5;
         private const float DENOISE_STRENGH = 10;
 
-        public ImageData Denoise(ImageData inputImage)
+        override public ImageData Denoise(ImageData inputImage)
         {
             var inputMat = getMat(inputImage);
             var noiseLevel = EstimateNoiseLevel(inputMat);
@@ -19,13 +19,11 @@ namespace GradeVisionLib.Impl
             if (noiseLevel >= NOISE_LEVEL_THRESHOLD)
             {
                 inputMat = ApplyNonLocalMeansDenoising(inputMat);
-                //debug
-                AddOperationText(inputMat, $"{noiseLevel:F2} NL-Means");
+                AddOperationTextifNeeded(inputMat, $"{noiseLevel:F2} NL-Means");
             }
             else
             {
-                //debug
-                AddOperationText(inputMat, $"{noiseLevel:F2} No Denoise");
+                AddOperationTextifNeeded(inputMat, $"{noiseLevel:F2} No Denoise");
             }
 
             return EmguCvImage.FromMat(inputMat, inputImage.Name);
@@ -58,8 +56,11 @@ namespace GradeVisionLib.Impl
             return result;
         }
 
-        private void AddOperationText(Mat image, string operationName)
+        private void AddOperationTextifNeeded(Mat image, string operationName)
         {
+            if (!isDebugModeEnabled)
+                return;
+
             var text = operationName;
             CvInvoke.PutText(
                 image,

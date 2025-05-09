@@ -9,11 +9,11 @@ using System.Linq;
 
 namespace GradeVisionLib.Impl
 {
-    public partial class EmguCVImageProcessor : IImageProcessor
+    public partial class EmguCVImageProcessor : ImageProcessorBase
     {
         private const double MinContourArea = 1000;
 
-        public ImageData CorrectPerspective(ImageData inputImage)
+        override public ImageData CorrectPerspective(ImageData inputImage)
         {
             var inputMat = getMat(inputImage);
             Mat cannyEdges = DetectEdgesCanny(inputMat);
@@ -22,7 +22,20 @@ namespace GradeVisionLib.Impl
             VectorOfPoint cannyRect = FindLargestRectangleContour(cannyEdges);
             VectorOfPoint adaptiveRect = FindLargestRectangleContour(adaptiveEdges);
 
-            #region debug
+            DrawDebugContoursIfNeeded(inputMat, cannyRect, adaptiveRect, inputImage.Name);
+            VectorOfPoint bestRect = ChooseBestRectangle(cannyRect, adaptiveRect);
+
+            if (bestRect == null)
+                return EmguCvImage.FromMat(inputMat, inputImage.Name);
+
+            return EmguCvImage.FromMat(ApplyPerspectiveCorrection(inputMat, bestRect), inputImage.Name);
+        }
+
+        private void DrawDebugContoursIfNeeded(Mat inputMat, VectorOfPoint cannyRect, VectorOfPoint adaptiveRect, string imageName)
+        {
+            if (!isDebugModeEnabled)
+                return;
+
             Mat outputImage = inputMat.Clone();
             if (cannyRect != null)
             {
@@ -33,24 +46,14 @@ namespace GradeVisionLib.Impl
             {
                 CvInvoke.DrawContours(outputImage, new VectorOfVectorOfPoint(new[] { adaptiveRect }), -1, new MCvScalar(255, 255, 255), 2);
             }
-            SaveImage(outputImage, "Perspective_rects.png");
-            #endregion
-
-            VectorOfPoint bestRect = ChooseBestRectangle(cannyRect, adaptiveRect);
-
-            if (bestRect == null)
-                return EmguCvImage.FromMat(inputMat, inputImage.Name);
-
-            return EmguCvImage.FromMat(ApplyPerspectiveCorrection(inputMat, bestRect), inputImage.Name);
+            SaveImage(outputImage, imageName, "DetectednameRectangeContures.png");
         }
 
         private Mat DetectEdgesCanny(Mat image)
         {
-            // Step 1: Perform Canny edge detection
             Mat edges = new Mat();
             CvInvoke.Canny(image, edges, 50, 150);
 
-            // Step 2: Apply dilation to fill in gaps in contours
             Mat dilatedEdges = new Mat();
             Mat structuringElement = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(3, 3), new Point(1, 1));
             CvInvoke.Dilate(edges, dilatedEdges, structuringElement, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar(1));

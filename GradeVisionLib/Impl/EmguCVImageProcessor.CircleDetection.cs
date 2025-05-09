@@ -12,7 +12,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 
 namespace GradeVisionLib.Impl
 {
-    public partial class EmguCVImageProcessor : IImageProcessor
+    public partial class EmguCVImageProcessor : ImageProcessorBase
     {
         private static readonly MCvScalar RED_EMGU_CV_COLOR = new MCvScalar(0, 0, 255);
         private static readonly MCvScalar GREEN_EMGU_CV_COLOR = new MCvScalar(0, 255, 0);
@@ -25,7 +25,7 @@ namespace GradeVisionLib.Impl
         private static readonly double POSITION_DUPLICATE_DIFFERENCE_THRESHOLD = 8f;
         private static readonly double RADIUS_DUPLICATE_DIFFERENCE_THRESHOLD = 5f;
 
-        public (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData input)
+        override public (ImageData, Dictionary<int, List<DetectedCircleBase>>) CircleDetection(ImageData input)
         {
             var inputMat = getMat(input);
             var outputMat = new EmguCvImage().ToMat();
@@ -82,11 +82,13 @@ namespace GradeVisionLib.Impl
 
                     DrawCircle(outputMat, circle, color);
                 }
-
-                FillPercentageHistogram.GenerateHistogramAndSaveImage(
-                fillPercentages,
-                threshold,
-                input.Name);
+                if (isDebugModeEnabled)
+                {
+                    HistogramGenerator.GenerateHistogramAndSaveImage(
+                    fillPercentages,
+                    threshold,
+                    input.Name);
+                }
             }
             return (EmguCvImage.FromMat(outputMat, input.Name), filteredGroups);
         }
@@ -97,8 +99,8 @@ namespace GradeVisionLib.Impl
             fillPercentages.ForEach(fill => histogram[(int)Math.Floor(fill)]++);
 
             var startOfFirstPeak = histogram.FindIndex(x => x > 0);
-            var endOfFirstPeak = histogram.Skip(startOfFirstPeak+1).ToList().FindIndex(x => x == 0) + startOfFirstPeak+1;
-            
+            var endOfFirstPeak = histogram.Skip(startOfFirstPeak + 1).ToList().FindIndex(x => x == 0) + startOfFirstPeak + 1;
+
             while (endOfFirstPeak + 2 < histogram.Count &&
                    (histogram[endOfFirstPeak + 1] > 0 || histogram[endOfFirstPeak + 2] > 0))
             {
@@ -227,15 +229,14 @@ namespace GradeVisionLib.Impl
                     IsCircleOverlaping(averageYPosition, circle, other, circle.GetRelationTo(other)))
                 ))
                 .ToList();
-            //debug logic
-            var nestedCircles = circles
-                .Where(circle => !result.Contains(circle))
-                .ToList();
 
-            nestedCircles.ForEach(circle =>
-            {   
-                DrawCircle(outputImage, circle, BLUE_EMGU_CV_COLOR);
-            });
+            if (isDebugModeEnabled)
+            {
+                var nestedCircles = circles
+                    .Where(circle => !result.Contains(circle))
+                    .ToList();
+                nestedCircles.ForEach(circle => { DrawCircle(outputImage, circle, BLUE_EMGU_CV_COLOR); });
+            }
 
             return result;
         }
@@ -264,11 +265,11 @@ namespace GradeVisionLib.Impl
             var tolerance = averageDeltaX * 0.10;
 
             bool isValid = !deltas.Any(delta => Math.Abs(delta - averageDeltaX) > tolerance);
-            //debug logic
-            if (!isValid)
+
+            if (!isValid && isDebugModeEnabled)
             {
                 foreach (var circle in circles)
-                {   
+                {
                     DrawCircle(outputImage, circle, YELLOW_EMGU_CV_COLOR);
                 }
 

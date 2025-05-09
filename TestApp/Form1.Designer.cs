@@ -53,6 +53,7 @@
             btnDefineGrade = new Button();
             tboxGradeDefintion = new TextBox();
             label7 = new Label();
+            chbocDebugEnabled = new CheckBox();
             ((System.ComponentModel.ISupportInitialize)picControlTest).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picxGradedTests).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
@@ -324,11 +325,26 @@
             label7.TabIndex = 19;
             label7.Text = "Grade name:";
             // 
+            // chbocDebugEnabled
+            // 
+            chbocDebugEnabled.AutoSize = true;
+            chbocDebugEnabled.Checked = true;
+            chbocDebugEnabled.CheckState = CheckState.Checked;
+            chbocDebugEnabled.Font = new Font("Segoe UI", 14.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            chbocDebugEnabled.Location = new Point(50, 731);
+            chbocDebugEnabled.Name = "chbocDebugEnabled";
+            chbocDebugEnabled.Size = new Size(160, 29);
+            chbocDebugEnabled.TabIndex = 21;
+            chbocDebugEnabled.Text = "Debug enabled";
+            chbocDebugEnabled.UseVisualStyleBackColor = true;
+            chbocDebugEnabled.CheckedChanged += chbocDebugEnabled_CheckedChanged;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1740, 793);
+            Controls.Add(chbocDebugEnabled);
             Controls.Add(groupBox1);
             Controls.Add(label6);
             Controls.Add(label5);
@@ -348,7 +364,7 @@
             Controls.Add(btnGradeTests);
             Margin = new Padding(4, 3, 4, 3);
             Name = "Form1";
-            Text = "Form1";
+            Text = "Grade Vision";
             Load += Form1_Load_1;
             ((System.ComponentModel.ISupportInitialize)picControlTest).EndInit();
             ((System.ComponentModel.ISupportInitialize)picxGradedTests).EndInit();
@@ -390,6 +406,7 @@
         private Button btnDefineGrade;
         private DataGridView dataGridView2;
         private Label label8;
+        private CheckBox chbocDebugEnabled;
     }
 }
 
