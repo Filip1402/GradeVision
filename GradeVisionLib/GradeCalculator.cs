@@ -14,8 +14,8 @@ namespace GradeVisionLib
     public partial class GradeCalculator
     {
         private readonly GradeScale GradeScale;
-        private readonly Dictionary<int, List<DetectedCircleBase>> ControlTest;
-        private readonly Dictionary<int, List<DetectedCircleBase>> StudentTest;
+        private readonly Dictionary<int, List<DetectedCircleBase>> ControlTestQuestions;
+        private readonly Dictionary<int, List<DetectedCircleBase>> StudentTestQuestions;
         private const double INVALID_TEST_SCORE = -100;
 
         public (string, double) GetGrade()
@@ -31,40 +31,36 @@ namespace GradeVisionLib
             }
 
             var totalScore = 0.0;
-            for (var i = 0; i < ControlTest.Count; i++)
+            for (var i = 0; i < ControlTestQuestions.Count; i++)
             {
-                var controlTestQuestion = ControlTest.ElementAt(i).Value;
-                var studentTestQuestion = StudentTest.ElementAt(i).Value;
+                var controlTestQuestion = ControlTestQuestions.ElementAt(i).Value;
+                var studentTestQuestion = StudentTestQuestions.ElementAt(i).Value;
                 if (controlTestQuestion.Count != studentTestQuestion.Count)
                     throw new ArgumentException("There is a mismatch between number of answers between student and control test.");
 
-                var numOfCorrectAnswersForQuestionControl = controlTestQuestion.Count((answer) => answer.IsMarked);
-                var numOfCorrectAnswersForQuestionStudent = studentTestQuestion.Count((answer) => answer.IsMarked);
+                var controlContainsUnansweredQuestions = ControlTestQuestions
+                    .Any(question => question.Value.Count == 0 || question.Value.All(answer => !answer.IsMarked));
 
-                if (numOfCorrectAnswersForQuestionStudent != numOfCorrectAnswersForQuestionControl)
+                if (controlContainsUnansweredQuestions)
+                    throw new ArgumentException("Control test doesn't have all question answered.");
+
+
+                var controlMarked = controlTestQuestion.Select(answer => answer.IsMarked).ToList();
+                var studentMarked = studentTestQuestion.Select(answer => answer.IsMarked).ToList();
+
+                if (controlMarked.SequenceEqual(studentMarked))
                 {
-                    return INVALID_TEST_SCORE;
+                    totalScore += 1.0;
                 }
-
-                var numOfCorrectStudentAnswers = 0;
-                for (var j = 0; j < controlTestQuestion.Count; j++)
-                {
-                    var controlAnswer = controlTestQuestion[j];
-                    var studentAnswer = studentTestQuestion[j];
-                    if (controlAnswer.IsMarked && studentAnswer.IsMarked)
-                    {
-                        numOfCorrectStudentAnswers++;
-                    }
-                }
-                totalScore += (double)numOfCorrectStudentAnswers / numOfCorrectAnswersForQuestionControl;
-
+                
             }
-            return totalScore / ControlTest.Count * 100;
+            return totalScore / ControlTestQuestions.Count * 100;
 
         }
+
         private bool TestsWithMismatchingStructure()
         {
-            return ControlTest.Count == 0 || StudentTest.Count == 0 || ControlTest.Count != StudentTest.Count;
+            return ControlTestQuestions.Count == 0 || StudentTestQuestions.Count == 0 || ControlTestQuestions.Count != StudentTestQuestions.Count;
         }
     }
 }

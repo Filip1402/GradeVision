@@ -249,7 +249,7 @@ namespace GradeVisionLib.Impl
         private List<DetectedCircleBase> GetCirclesWithUniformRadius(List<DetectedCircleBase> circles)
         {
             var averageRadius = circles.Average(circle => circle.Radius);
-            return circles.Where(circle => circle.Radius >= (averageRadius * 0.65) && circle.Radius <= (averageRadius * 1.2)).ToList();
+            return circles.Where(circle => circle.Radius >= (averageRadius * 0.5) && circle.Radius <= (averageRadius * 1.3)).ToList();
         }
 
         private bool isCircleGroupValid(List<DetectedCircleBase> circles, Mat outputImage)

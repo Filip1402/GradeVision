@@ -40,17 +40,21 @@ namespace GradeVisionLib
 
             GradeCalculator grader = new GradeCalculator(
                 gradeScale,
-                studentAnswers,
-                controlAnswers
+                controlAnswers,
+                studentAnswers
             );
-
-            var (grade, score) = grader.GetGrade();
-
-            ProcessStep(() => _imageProcessor.VisualizeDetectedCircles(rawImage, studentAnswers), "VisualizeStudentCircles");
-            proccedImage = ProcessStep(() => _imageProcessor.VisualizeGrade(rawImage, studentAnswers, controlAnswers, grade, score), "VisualizeGrade");
-
-            ResetStepCounter();
-            return (proccedImage, grade, score);
+            try
+            {
+                var (grade, score) = grader.GetGrade();
+                ProcessStep(() => _imageProcessor.VisualizeDetectedCircles(rawImage, studentAnswers), "VisualizeStudentCircles");
+                proccedImage = ProcessStep(() => _imageProcessor.VisualizeGrade(rawImage, studentAnswers, controlAnswers, grade, score), "VisualizeGrade");
+                ResetStepCounter();
+                return (proccedImage, grade, score);
+            }
+            catch(Exception ex)
+            {
+                throw;
+            }
         }
 
         private (ImageData, ImageData) ProcessImage(ImageData rawImage, string outputDir)

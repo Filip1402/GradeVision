@@ -125,14 +125,20 @@ namespace TestApp
                 var image = await LoadImageWithoutLockAsync(imagePath);
                 picTestToBeGraded.Image = image;
                 var imageData = EmguCvImage.FromImage(image, Path.GetFileName(imagePath));
-                var (processedImage, grade, score) = await Task.Run(() =>
+                try
+                {
+                    var (processedImage, grade, score) = await Task.Run(() =>
                     AnswerSheetAnalyzer.ProcessAnswerSheet(imageData, ControlAnswers, GradeScale));
-
-                picxGradedTests.Image = (processedImage as EmguCvImage).ToMat().ToImage<Bgr, byte>().ToBitmap();
-
-                System.Diagnostics.Debug.WriteLine($"Grade: {grade}, Score: {score}");
-                results.Add(new GradingResult(Path.GetFileName(imagePath), grade, score));
-                await Task.Yield();
+                    picxGradedTests.Image = (processedImage as EmguCvImage).ToMat().ToImage<Bgr, byte>().ToBitmap();
+                    System.Diagnostics.Debug.WriteLine($"Grade: {grade}, Score: {score}");
+                    results.Add(new GradingResult(Path.GetFileName(imagePath), grade, score));
+                    await Task.Yield();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                    return;
+                }
             }
         }
 
@@ -196,7 +202,7 @@ namespace TestApp
         private async void chbocDebugEnabled_CheckedChanged(object sender, EventArgs e)
         {
             AnswerSheetAnalyzer = new AnswerSheetGrader(new EmguCVImageProcessor(chbocDebugEnabled.Checked), outputFolder);
-            if(ControlTestPath != null)
+            if (ControlTestPath != null)
                 await ProcessControlTestImage();
         }
     }
@@ -204,15 +210,15 @@ namespace TestApp
 
 public class GradingResult
 {
-    public string Image { get; set; }
+    public string ImageName { get; set; }
     public string Grade { get; set; }
-    public double Score { get; set; }
+    public double ScoredPercentage { get; set; }
 
-    public GradingResult(string image, string grade, double score)
+    public GradingResult(string imageName, string grade, double scoredPercentage)
     {
         Grade = grade;
-        Score = score;
-        Image = image;
+        ScoredPercentage = scoredPercentage;
+        ImageName = imageName;
     }
 }
 
