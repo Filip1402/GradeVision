@@ -58,7 +58,7 @@ namespace GradeVisionLib.Impl
                                                 .Select(c => GetFillPercentage(inputMat, (EmguCVCircle)c))
                                                 .ToList();
 
-            double threshold = CalculateFillPercentageTreshold(fillPercentages);
+            double threshold = HistogramGenerator.CalculateFillPercentageTreshold(fillPercentages);
 
             foreach (var group in filteredGroups)
             {
@@ -92,24 +92,7 @@ namespace GradeVisionLib.Impl
             }
             return (EmguCvImage.FromMat(outputMat, input.Name), filteredGroups);
         }
-
-        private double CalculateFillPercentageTreshold(List<double> fillPercentages)
-        {
-            var histogram = new List<int>(new int[101]);
-            fillPercentages.ForEach(fill => histogram[(int)Math.Floor(fill)]++);
-
-            var startOfFirstPeak = histogram.FindIndex(x => x > 0);
-            var endOfFirstPeak = histogram.Skip(startOfFirstPeak + 1).ToList().FindIndex(x => x == 0) + startOfFirstPeak + 1;
-
-            while (endOfFirstPeak + 2 < histogram.Count &&
-                   (histogram[endOfFirstPeak + 1] > 0 || histogram[endOfFirstPeak + 2] > 0))
-            {
-                endOfFirstPeak++;
-            }
-
-            return endOfFirstPeak;
-        }
-
+        
         private List<DetectedCircleBase> DetectAllCircles(Mat grayMat, Mat outputImage)
         {
             VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint();

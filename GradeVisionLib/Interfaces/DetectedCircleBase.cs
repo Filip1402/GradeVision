@@ -31,11 +31,11 @@ namespace GradeVisionLib.Interfaces
 
         public CircleRelation GetRelationTo(DetectedCircleBase other)
         {
-            double dx = this.X - other.X;
-            double dy = this.Y - other.Y;
-            double distance = Math.Sqrt(dx * dx + dy * dy);
-            float r1 = this.Radius;
-            float r2 = other.Radius;
+            var dx = this.X - other.X;
+            var dy = this.Y - other.Y;
+            var distance = Math.Sqrt(dx * dx + dy * dy);
+            var r1 = this.Radius;
+            var r2 = other.Radius;
 
             if (distance <= r1 - r2)
             {

@@ -22,7 +22,7 @@ namespace GradeVisionLib
         {
             currentImageName = CONTROL_FILE_NAME;
             inputImage.Name = CONTROL_FILE_NAME;
-            string outputDir = PrepareOutputDirectory(currentImageName);
+            var outputDir = PrepareOutputDirectoryIfNeeded(currentImageName);
             var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
             (proccedImage, var controlAnswers) = ProcessStep(() => _imageProcessor.CircleDetection(proccedImage), "CircleDetection");
             proccedImage = ProcessStep(() => _imageProcessor.VisualizeDetectedCircles(rawImage, controlAnswers), "VisualizeControlCircles");
@@ -34,7 +34,7 @@ namespace GradeVisionLib
         public (ImageData, string, double) ProcessAnswerSheet(ImageData inputImage, Dictionary<int, List<DetectedCircleBase>> controlAnswers, GradeScale gradeScale)
         {
             currentImageName = inputImage.Name;
-            string outputDir = PrepareOutputDirectory(currentImageName);
+            string outputDir = PrepareOutputDirectoryIfNeeded(currentImageName);
             var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
             (proccedImage, var studentAnswers) = ProcessStep(() => _imageProcessor.CircleDetection(proccedImage), "CircleDetection");
 
@@ -119,7 +119,7 @@ namespace GradeVisionLib
             SaveImage(image, fileName);
         }
 
-        private string PrepareOutputDirectory(string imageName)
+        private string PrepareOutputDirectoryIfNeeded(string imageName)
         {
             string outputDir = Path.Combine(outputPath, imageName);
             if (_imageProcessor.isDebugModeEnabled &&  !Directory.Exists(outputDir))

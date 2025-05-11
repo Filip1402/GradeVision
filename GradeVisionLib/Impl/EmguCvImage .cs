@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -34,7 +35,7 @@ namespace GradeVisionLib.Impl
         {
             var totalBytes = mat.Width * mat.Height * mat.NumberOfChannels;
             var buffer = new byte[totalBytes];
-            System.Runtime.InteropServices.Marshal.Copy(mat.DataPointer, buffer, 0, totalBytes);
+            Marshal.Copy(mat.DataPointer, buffer, 0, totalBytes);
             return buffer;
         }
 
