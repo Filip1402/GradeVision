@@ -40,7 +40,7 @@ namespace TestApp
             dataGridView2.Columns[1].ReadOnly = false;
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private void btnGeneratePdf_Click(object sender, EventArgs e)
         {
             var numOfQuestions = (int)numericUpDown1.Value;
             var numOfAnswersPerQuestions = (int)numericUpDown2.Value;

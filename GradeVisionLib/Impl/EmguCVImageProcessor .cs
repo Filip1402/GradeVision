@@ -27,7 +27,7 @@ namespace GradeVisionLib.Impl
             CvInvoke.Imwrite(filePath, image);
             return filePath;
         }
-        private void DrawCircle(Mat mat, DetectedCircleBase circle, MCvScalar color, int thickness = 1)
+        private void DrawCircle(Mat mat, DetectedCircleBase circle, MCvScalar color, int thickness = 2)
         {
             CvInvoke.Circle(
                 mat,

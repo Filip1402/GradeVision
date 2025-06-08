@@ -5,6 +5,7 @@ using GradeVisionLib.Interfaces;
 using GradeVisionLib.Models;
 using Lombok.NET;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Reflection.Metadata.Ecma335;
 
 namespace GradeVisionLib
@@ -35,6 +36,7 @@ namespace GradeVisionLib
         {
             currentImageName = inputImage.Name;
             string outputDir = PrepareOutputDirectoryIfNeeded(currentImageName);
+            Stopwatch stopwatch = Stopwatch.StartNew(); // Start measuring time
             var (rawImage, proccedImage) = ProcessImage(inputImage, outputDir);
             (proccedImage, var studentAnswers) = ProcessStep(() => _imageProcessor.CircleDetection(proccedImage), "CircleDetection");
 
@@ -49,12 +51,19 @@ namespace GradeVisionLib
                 ProcessStep(() => _imageProcessor.VisualizeDetectedCircles(rawImage, studentAnswers), "VisualizeStudentCircles");
                 proccedImage = ProcessStep(() => _imageProcessor.VisualizeGrade(rawImage, studentAnswers, controlAnswers, grade, score), "VisualizeGrade");
                 ResetStepCounter();
+                stopwatch.Stop(); // Stop measuring time
+                Debug.WriteLine($"[ProcessAnswerSheet] Execution time: {stopwatch.ElapsedMilliseconds} ms");
                 return (proccedImage, grade, score);
             }
             catch(Exception ex)
             {
+                stopwatch.Stop(); // Stop measuring time
+                Debug.WriteLine($"[ProcessAnswerSheet] Execution time: {stopwatch.ElapsedMilliseconds} ms");
+
                 throw;
             }
+
+
         }
 
         private (ImageData, ImageData) ProcessImage(ImageData rawImage, string outputDir)

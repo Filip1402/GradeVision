@@ -36,21 +36,7 @@ namespace GradeVisionLib.Impl
             var sortedCircleGroups = GroupAndSortCirclesByYPosition(allCircles);
             var random = new Random();
 
-            foreach (var group in sortedCircleGroups)
-            {
-                // Generate a unique random color for this group (unmarked circles)
-                var groupColor = new MCvScalar(
-                random.Next(50, 256), // Avoid very dark colors
-                    random.Next(50, 256),
-                    random.Next(50, 256)
-                );
-
-                foreach (EmguCVCircle circle in group.Value)
-                {
-                    DrawCircle(outputMat, circle, groupColor);
-                }
-
-            }
+            DrawGroupedCircles(sortedCircleGroups, outputMat, random);
 
             var filteredGroups = FilterInvalidGroups(sortedCircleGroups, outputMat);
 
@@ -58,38 +44,10 @@ namespace GradeVisionLib.Impl
                                                 .Select(c => GetFillPercentage(inputMat, (EmguCVCircle)c))
                                                 .ToList();
 
-            double threshold = HistogramGenerator.CalculateFillPercentageTreshold(fillPercentages);
+            var threshold = HistogramGenerator.CalculateFillPercentageTreshold(fillPercentages);
+            GenerateAndSaveFillPercentageHistogramIfNeeded(input, fillPercentages, threshold);
 
-            foreach (var group in filteredGroups)
-            {
-                var groupColor = new MCvScalar(
-                random.Next(50, 256),
-                    random.Next(50, 256),
-                    random.Next(50, 256)
-                );
-
-                foreach (EmguCVCircle circle in group.Value)
-                {
-                    double fillPercent = Math.Floor(GetFillPercentage(inputMat, circle));
-
-                    bool isMarked = fillPercent > threshold;
-                    if (isMarked)
-                    {
-                        circle.SetToMarked();
-                    }
-
-                    var color = isMarked ? GREEN_EMGU_CV_COLOR : groupColor;
-
-                    DrawCircle(outputMat, circle, color);
-                }
-                if (isDebugModeEnabled)
-                {
-                    HistogramGenerator.GenerateHistogramAndSaveImage(
-                    fillPercentages,
-                    threshold,
-                    input.Name);
-                }
-            }
+            DrawFilteredAndMarkGroups(filteredGroups, random, inputMat, threshold, outputMat);
             return (EmguCvImage.FromMat(outputMat, input.Name), filteredGroups);
         }
         
@@ -184,6 +142,24 @@ namespace GradeVisionLib.Impl
             return bestYPos;
         }
 
+        private void DrawGroupedCircles(Dictionary<int, List<DetectedCircleBase>> groups, Mat outputMat, Random random)
+        {
+            foreach (var group in groups)
+            {
+                var groupColor = new MCvScalar(
+                    random.Next(50, 256),
+                    random.Next(50, 256),
+                    random.Next(50, 256)
+                );
+
+                foreach (EmguCVCircle circle in group.Value)
+                {
+                    DrawCircle(outputMat, circle, groupColor);
+                }
+            }
+        }
+
+
         private Dictionary<int, List<DetectedCircleBase>> FilterInvalidGroups(Dictionary<int, List<DetectedCircleBase>> sortedGroups, Mat outputImage)
         {
             var validGroups = new Dictionary<int, List<DetectedCircleBase>>();
@@ -268,6 +244,44 @@ namespace GradeVisionLib.Impl
                 DrawCircle(mask, circle, new MCvScalar(255), -1);
                 MCvScalar mean = CvInvoke.Mean(thresholdedImage, mask);
                 return (mean.V0 / 255.0) * 100;
+            }
+        }
+        private void GenerateAndSaveFillPercentageHistogramIfNeeded(ImageData input, List<double> fillPercentages, double threshold)
+        {
+            if (isDebugModeEnabled)
+            {
+                HistogramGenerator.GenerateHistogramAndSaveImage(
+                    fillPercentages,
+                    threshold,
+                    input.Name);
+            }
+        }
+        private void DrawFilteredAndMarkGroups(Dictionary<int, List<DetectedCircleBase>> filteredGroups, Random random, Mat inputMat, double threshold,
+            Mat outputMat)
+        {
+            foreach (var group in filteredGroups)
+            {
+                var groupColor = new MCvScalar(
+                    random.Next(50, 256),
+                    random.Next(50, 256),
+                    random.Next(50, 256)
+                );
+
+                foreach (EmguCVCircle circle in group.Value)
+                {
+                    double fillPercent = Math.Floor(GetFillPercentage(inputMat, circle));
+
+                    bool isMarked = fillPercent > threshold;
+                    if (isMarked)
+                    {
+                        circle.SetToMarked();
+                    }
+
+                    var color = isMarked ? GREEN_EMGU_CV_COLOR : groupColor;
+
+                    DrawCircle(outputMat, circle, color);
+                }
+
             }
         }
     }

@@ -110,19 +110,19 @@ namespace GradeVisionLib.Impl
             if (rect1 == null) return rect2;
             if (rect2 == null) return rect1;
 
-            double area1 = CvInvoke.ContourArea(rect1);
-            double area2 = CvInvoke.ContourArea(rect2);
+            var area1 = CvInvoke.ContourArea(rect1);
+            var area2 = CvInvoke.ContourArea(rect2);
 
-            double aspect1 = GetAspectRatio(rect1);
-            double aspect2 = GetAspectRatio(rect2);
+            var aspect1 = GetAspectRatio(rect1);
+            var aspect2 = GetAspectRatio(rect2);
 
-            bool isValid1 = aspect1 is > 0.5 and < 2.0;
-            bool isValid2 = aspect2 is > 0.5 and < 2.0;
+            var isValid1 = aspect1 is > 0.5 and < 2.0;
+            var isValid2 = aspect2 is > 0.5 and < 2.0;
 
             if (isValid1 && isValid2)
             {
-                double uniformity1 = GetUniformity(rect1);
-                double uniformity2 = GetUniformity(rect2);
+                var uniformity1 = GetUniformity(rect1);
+                var uniformity2 = GetUniformity(rect2);
                 return uniformity1 < uniformity2 ? rect1 : rect2;
             }
 

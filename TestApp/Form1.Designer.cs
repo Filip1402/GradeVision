@@ -106,7 +106,7 @@
             btnGeneratePdf.TabIndex = 4;
             btnGeneratePdf.Text = "Generate test PDF template";
             btnGeneratePdf.UseVisualStyleBackColor = false;
-            btnGeneratePdf.Click += button2_Click;
+            btnGeneratePdf.Click += btnGeneratePdf_Click;
             // 
             // dataGridView1
             // 
